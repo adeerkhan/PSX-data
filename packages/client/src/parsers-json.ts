@@ -520,23 +520,74 @@ export function parseConstituents(html: string, url: string, indexCode: string):
 /**
  * Parse the dps `/company/{SYMBOL}` profile page.
  *
- * Stat pairs are `div.stats_label` / `div.stats_value` siblings. The label text
- * is the only key, so it is normalised (case, whitespace) before lookup.
+ * **The page concatenates several stat blocks that reuse the same labels.**
+ * Verified against HBL on 2026-09-30, the document carries:
+ *
+ *   block 1 -- live quote:     Open 302.80, High 309.00, Low 302.80,
+ *                               Volume 1,153,509, LDCP 302.15
+ *   block 2 -- previous close: Close 308.29, LDCP 304.53, Change 1.23%,
+ *                               Volume 124,500, Total Trades 136
+ *   block 3 -- index entries:  Open 0.00, High 0.00, ... (all zeros)
+ *
+ * So `Open`, `High`, `Low`, `LDCP`, `Volume` and `Free Float` each appear more
+ * than once, with different meanings and different units -- `Free Float` is
+ * `586,741,003` in one block and `40.00%` in another.
+ *
+ * A naive `Map.set()` keeps the LAST occurrence, which silently reported:
+ *   - `current`/`ldcp`/`volume` as block 3's zeros,
+ *   - `freeFloatShares` as `null`, because `40.00` is a percentage, not a count.
+ *
+ * So we collect **every** value per label and read the FIRST, which is the live
+ * quote block. Duplicate labels are recorded in `warnings` rather than hidden.
  */
 export function parseCompanyProfile(html: string, url: string, symbol: string): CompanyProfile {
   const $ = cheerio.load(html);
 
-  const stats = new Map<string, string>();
+  /** label -> every value seen for it, in document order. */
+  const allValues = new Map<string, string[]>();
   $('div.stats_label').each((_, element) => {
     const label = $(element).text().trim().toLowerCase();
     const value = $(element).next('div.stats_value').text().trim();
-    if (label !== '') stats.set(label, value);
+    if (label === '') return;
+    const existing = allValues.get(label);
+    if (existing == null) allValues.set(label, [value]);
+    else existing.push(value);
   });
 
+  const warnings: string[] = [];
+
+  /** First (live-quote-block) value for a label. */
+  const first = (key: string): string | null => allValues.get(key)?.[0] ?? null;
+
   const stat = (key: string): number | null => {
-    const raw = stats.get(key);
+    const raw = first(key);
     return raw == null ? null : parseNumber(raw);
   };
+
+  // A share count must be an integer count; a percentage under the same label
+  // ("Free Float" = "40.00%") is a different field entirely and must not be
+  // mistaken for a share tally.
+  const shareCount = (key: string): number | null => {
+    const raw = first(key);
+    if (raw == null) return null;
+    if (raw.includes('%')) return null;
+    const value = parseNumber(raw);
+    return value == null ? null : Math.round(value);
+  };
+
+  // Surface ambiguous labels rather than silently picking one.
+  for (const [label, values] of allValues) {
+    if (values.length > 1) {
+      const distinct = new Set(values).size;
+      if (distinct > 1) {
+        warnings.push(
+          `label "${label}" appears ${values.length} times with differing values ` +
+            `(${values.map((v) => JSON.stringify(v)).join(', ')}); read the first. ` +
+            `PSX concatenates multiple stat blocks on this page.`,
+        );
+      }
+    }
+  }
 
   // Upstream's own misspelling `--decription` is load-bearing.
   const description = $('div.profile__item--decription p')
@@ -546,13 +597,12 @@ export function parseCompanyProfile(html: string, url: string, symbol: string): 
 
   const title = $('h1, h2').first().text().trim();
 
-  const warnings: string[] = [];
-  if (stats.size === 0) {
+  if (allValues.size === 0) {
     warnings.push('no stats_label pairs found -- PSX may have changed the profile layout');
   }
 
-  const totalShares = stat('shares');
-  const freeFloat = stat('free float');
+  const totalShares = shareCount('shares');
+  const freeFloatShares = shareCount('free float');
 
   return {
     symbol: symbol.toUpperCase(),
@@ -563,10 +613,17 @@ export function parseCompanyProfile(html: string, url: string, symbol: string): 
     open: stat('open'),
     high: stat('high'),
     low: stat('low'),
-    current: stat('ldcp') ?? stat('current'),
+    // NOTE: do not fall back to `ldcp` here. LDCP is the *previous* session's
+    // close, so substituting it reports a stale price as the live one. The live
+    // block on this page publishes Open/High/Low/Volume/LDCP but no "Current";
+    // absence is the honest answer until PSX publishes one.
+    current: stat('current'),
     volume: stat('volume'),
-    totalShares: totalShares == null ? null : parseInteger(totalShares),
-    freeFloatShares: freeFloat == null ? null : parseInteger(freeFloat),
+    totalShares,
+    freeFloatShares,
+    // The previous-close block publishes a real "Close"; the live block does not.
+    // Surfaced separately rather than folded into `current`.
+    previousClose: stat('close'),
     updatedAt: null,
     warnings,
   };

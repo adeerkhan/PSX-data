@@ -11,6 +11,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import * as cheerio from 'cheerio';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -450,8 +451,56 @@ describe('HTML entity parsers', () => {
   it('parses a company profile including the misspelled decription class', () => {
     const profile = parseCompanyProfile(read('company-hbl.html'), 'https://dps.psx.com.pk/company/HBL', 'HBL');
     expect(profile.symbol).toBe('HBL');
-    expect(profile.totalShares == null || typeof profile.totalShares === 'number').toBe(true);
     expect(profile.warnings).not.toContain('no stats_label pairs found -- PSX may have changed the profile layout');
+  });
+
+  it('reads the first occurrence of a duplicated stat label', () => {
+    // The company page concatenates several stat blocks that REUSE labels.
+    // Verified on the live HBL page: 15 labels are duplicated --
+    //   open x4, high x4, low x4, volume x4, ldcp x4, close x3, change x3,
+    //   total trades x3, free float x2
+    // A last-write-wins Map reads the wrong block: `volume` became the indices
+    // block's 0, and `Free Float` became the percentage 40.00% rather than the
+    // share count.
+    const html = read('company-hbl.html');
+    const profile = parseCompanyProfile(html, 'https://dps.psx.com.pk/company/HBL', 'HBL');
+
+    const occurrences = (label) => {
+      const $ = cheerio.load(html);
+      const found: string[] = [];
+      $('div.stats_label').each((_, el) => {
+        if ($(el).text().trim().toLowerCase() === label) {
+          found.push($(el).next('div.stats_value').text().trim());
+        }
+      });
+      return found;
+    };
+
+    const volumes = occurrences('volume');
+    expect(volumes.length).toBeGreaterThan(1);
+    const firstVolume = Number(volumes[0].replace(/[,\s]/g, ''));
+    expect(profile.volume).toBe(firstVolume);
+    expect(profile.volume).toBeGreaterThan(0);
+  });
+
+  it('reads Free Float as a share count, not a percentage', () => {
+    // The page publishes `Free Float` twice: "586,741,003" then "40.00%".
+    // Treating the percentage as a share tally yields 40 shares.
+    const profile = parseCompanyProfile(read('company-hbl.html'), 'https://dps.psx.com.pk/company/HBL', 'HBL');
+    expect(profile.freeFloatShares).toBeGreaterThan(1_000_000);
+    expect(Number.isInteger(profile.freeFloatShares ?? 0)).toBe(true);
+  });
+
+  it('never substitutes LDCP for the current price', () => {
+    // LDCP is the PREVIOUS close. Falling back to it reports a stale price as
+    // live. Absence is the honest answer.
+    const profile = parseCompanyProfile(read('company-hbl.html'), 'https://dps.psx.com.pk/company/HBL', 'HBL');
+    expect(profile.current).not.toBe(profile.ldcp);
+  });
+
+  it('reports duplicated labels as warnings rather than hiding them', () => {
+    const profile = parseCompanyProfile(read('company-hbl.html'), 'https://dps.psx.com.pk/company/HBL', 'HBL');
+    expect(profile.warnings.some((w) => w.includes('appears') && w.includes('times'))).toBe(true);
   });
 
   it('parses the listings table', () => {

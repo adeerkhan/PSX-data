@@ -183,12 +183,28 @@ export interface CompanyProfile {
   high: number | null;
   low: number | null;
   current: number | null;
+  /**
+   * Previous session's closing price.
+   *
+   * Distinct from {@link CompanyProfile.ldcp}, which is the same concept as
+   * published by PSX; this field exists because the company page's
+   * previous-close block publishes a literal "Close" label that differs from the
+   * live block's "LDCP". Both are kept so neither is silently reinterpreted.
+   */
+  previousClose: number | null;
   volume: number | null;
   /** Total shares outstanding. */
   totalShares: number | null;
-  /** Free-floating shares. */
+  /** Free-floating shares, as a count (not the free-float percentage). */
   freeFloatShares: number | null;
   updatedAt: Timestamp | null;
+  /**
+   * Non-fatal parsing notes.
+   *
+   * Populated when a label appeared more than once with differing values -- the
+   * company page concatenates several stat blocks that reuse labels such as
+   * `Open`, `LDCP`, and `Free Float`.
+   */
   warnings: string[];
 }
 
