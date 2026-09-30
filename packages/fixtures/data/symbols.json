@@ -1,0 +1,282 @@
+[
+ {
+  "symbol": "AKBLTFC6",
+  "name": "Askari Bank(TFC6)",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "BAFLTFC6",
+  "name": "Bank Al-Falah(TFC6",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "BAFLTFC8",
+  "name": "Bank Alfalah(TFC8)",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "BAFLTFC9",
+  "name": "Bank Alfalah Limited",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "BAHLTFC10",
+  "name": "BANK AL HABIB LTD. (10TH ISSUE)",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "BAHLTFC9",
+  "name": "Bank Al-Habib(TFC9",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "BIPLSC",
+  "name": "Bank IslamiSC",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "BIPLSC2",
+  "name": "BankIslami Pakistan Ltd",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "BOPTFC2",
+  "name": "Bank Of Punjab(TFC",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "FABLSC",
+  "name": "Faysal Bank Sukuk",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "HBLTFC2",
+  "name": "Habib Bank(TFC2)",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "HBLTFC3",
+  "name": "Habib Bank (TFC3)",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "JSBLTFC2",
+  "name": "JS Bank Ltd(TFC2)",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "JSBLTFC3",
+  "name": "JS Bank(TFC)",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "JSBLTFC4",
+  "name": "JS BANK (TFC)",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "KELSC5",
+  "name": "K-Electric(Sukuk5)",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "KELSC6",
+  "name": "K-Electric LtdSC6",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "KELSTSC",
+  "name": "KEL Short Term Sukuk",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "KFGB1",
+  "name": "Kashf Foundation Gender Bond",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "MMBLTFC",
+  "name": "Mobilink Microfinance Bank TFC",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "MUGHALSC",
+  "name": "Mughal Steel Sukuk",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "MUGHALSTSC",
+  "name": "Mughal Iron Short Term Sukuk",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS020927",
+  "name": "1 Yr Dis GoP Hybrid Sukuk Mat-02-Sep-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS050827",
+  "name": "1 Yr Dis GoP Hybrid Sukuk Mat-05-Aug-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS080727",
+  "name": "1 Yr Dis GoP Hybrid Sukuk Mat-08-Jul-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS100627",
+  "name": "1 Yr Dis GoP Hybrid Sukuk Mat-10-Jun-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS130527",
+  "name": "1 Yr DIS GoP Hybrid Sukuk Mat-13-May-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS150427",
+  "name": "1 Yr DIS GoP Hybrid Sukuk Mat-15-Apr-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS160927",
+  "name": "1-Yr Dis GoP Hybrid Sukuk Mat-16-Sep-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS190827",
+  "name": "1 Yr Dis GoP Hybrid Sukuk Mat-19-Aug-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS200527",
+  "name": "1 Yr Dis GoP Hybrid Sukuk Mat -20-May-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS220727",
+  "name": "1 Yr Dis GoP Hybrid Sukuk Mat-22-Jul-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS230627",
+  "name": "1 Yr Dis GoP Hybrid Sukuk Mat-23-Jun-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GHS290427",
+  "name": "1 Yr DIS GoP Hybrid Sukuk Mat-29-Apr-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GIS080227",
+  "name": "1 Year GIS Discounted Mat - 08-Feb-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GIS101226",
+  "name": "1 Year GIS Discounted Mat- 10-Dec-26",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GIS131126",
+  "name": "1 Year GIS Discounted Mat 13-11-26",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GIS141026",
+  "name": "1 Year GIS Discounted Mat - 14-Oct-26",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GIS210127",
+  "name": "1 Year GIS Discounted Mat - 21-Jan-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ },
+ {
+  "symbol": "P01GIS250327",
+  "name": "1 Year GIS Discounted Mat - 25-Mar-27",
+  "sectorName": "BILLS AND BONDS",
+  "isETF": false,
+  "isDebt": true
+ }
+]

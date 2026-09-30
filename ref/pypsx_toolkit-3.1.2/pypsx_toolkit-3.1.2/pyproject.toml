@@ -1,0 +1,178 @@
+[build-system]
+requires = ["setuptools>=68", "wheel", "Cython>=3.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pypsx-toolkit"
+version = "3.1.2"
+description = "Pakistan Stock Exchange (PSX) data library with yfinance-like API"
+readme = "README.md"
+# 3.10 is the real floor: `pandas>=2.0` already excludes 3.8/3.9, and
+# core/utils.py uses PEP 604 (`int | None`) in a runtime signature.
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+  { name = "PyPSX Team", email = "pypsxofficial@gmail.com" }
+]
+maintainers = [
+  { name = "PyPSX Team", email = "pypsxofficial@gmail.com" }
+]
+keywords = ["psx", "pakistan", "stock", "finance", "data", "api", "pandas", "yfinance", "market-data"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Financial and Insurance Industry",
+  "License :: Other/Proprietary License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Office/Business :: Financial",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+dependencies = [
+  "requests>=2.31.0",
+  # Browser-grade TLS client for PSX market-data HTTPS (plain Python TLS is
+  # often rejected). Also carries session request headers the hosts expect.
+  "curl_cffi>=0.6.0",
+  "beautifulsoup4>=4.12.0",
+  "lxml>=4.9.0",
+  # See pypsx_dev/pyproject.toml's identical pins for the reasoning: the
+  # ceiling must not exclude the first cp314-wheel release (pandas 2.3.3,
+  # numpy 2.3.2), and is deliberately kept below pandas 3.0 (mandatory CoW +
+  # other breaking changes) pending its own review.
+  "pandas>=2.0.0,<3.0.0",
+  "loguru>=0.7.0",
+  "numpy>=1.24.0,<2.4.0",
+  # Imported by api.py, endpoints/historical.py and core/utils.py. Those imports
+  # are try/except-guarded with a no-op fallback, but the fallback path is
+  # untested and every target environment (including Colab) already ships tqdm.
+  "tqdm>=4.66.0",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.5.0", "seaborn>=0.11.0"]
+dev = [
+  "pytest>=7.0.0",
+  "pytest-cov>=4.0.0",
+  "requests-mock>=1.10.0",
+  "black>=23.0.0",
+  "flake8>=6.0.0",
+  "mypy>=1.0.0",
+  "isort>=5.12.0",
+]
+all = ["pypsx-toolkit[plot,dev]"]
+
+[project.urls]
+Homepage = "https://pypsx.com"
+Documentation = "https://markets.pypsx.com/docs"
+Changelog = "https://markets.pypsx.com/docs/changelog"
+
+# NOTE: no [project.scripts]. This previously declared
+#   pypsx-toolkit = "pypsx_toolkit:quick_start"
+# but `quick_start` does not exist anywhere in the package, so the installed
+# console script raised AttributeError on every invocation. This library has no
+# CLI; removing the entry point is the honest fix. If a CLI is wanted later,
+# implement the target function first.
+
+[tool.setuptools]
+include-package-data = true
+
+# Ship .pyi stub files and py.typed marker alongside the compiled binaries.
+# Without this, pip install pypsx will NOT include the stubs and IDE
+# autocomplete will be completely broken.
+[tool.setuptools.package-data]
+"*" = ["*.pyi", "py.typed"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = [
+  "charts*",
+  "tests*", 
+  "test_*",
+  "*.tests*",
+  "build*",
+  "dist*",
+  "*.egg-info*",
+  "*.png",
+  "*.jpg",
+  "*.jpeg",
+  "*.gif",
+  "pypsx_api*",
+  "backend*",
+  "update_imports*",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[tool.mypy]
+python_version = "3.11"
+follow_imports = "skip"
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = ["pypsx_toolkit.endpoints.*", "pypsx_toolkit.core.*", "pypsx_toolkit.format.*", "pypsx_toolkit.analysis.*"]
+ignore_errors = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "integration: marks tests as integration tests",
+  "unit: marks tests as unit tests",
+]
+# NOTE: deliberately no blanket `filterwarnings = ["ignore::DeprecationWarning"]`
+# here. The Colab-mirror suite (b2c/tests/colab_mirror/) runs under
+# `filterwarnings = error` because a warning in a notebook cell is a user-visible
+# defect. A blanket ignore at this level hides exactly the class of bug that
+# suite exists to catch. Allow-list individual warnings there, with an owner and
+# an expiry, instead of re-adding a catch-all.
+

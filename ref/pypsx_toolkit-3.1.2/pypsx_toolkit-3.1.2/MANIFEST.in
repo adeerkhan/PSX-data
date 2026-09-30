@@ -1,0 +1,21 @@
+# Include stub files and py.typed marker (needed for pip install to get autocomplete)
+recursive-include pypsx_toolkit *.pyi
+recursive-include pypsx_toolkit py.typed
+
+# Exclude all .py implementation files from the source distribution so the
+# sdist does not leak proprietary scraping/parsing logic, then re-include
+# only what setup.py's EXCLUDE_STEMS keeps as plain Python. These
+# re-includes MUST come after this exclude -- MANIFEST.in processes
+# include/exclude directives in file order, so anything included earlier
+# gets silently undone here otherwise.
+recursive-exclude pypsx_toolkit *.py
+recursive-include pypsx_toolkit __init__.py
+include pypsx_toolkit/models.py
+include pypsx_toolkit/endpoints/constants.py
+
+# Exclude build artefacts and dev folders
+prune backend
+prune build
+prune dist
+prune tests
+prune *.egg-info

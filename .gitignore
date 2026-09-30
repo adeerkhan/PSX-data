@@ -1,0 +1,17 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+coverage/
+*.log
+
+# Note: packages/fixtures/data/ IS tracked.
+#
+# The parser tests read recorded PSX responses and never touch the network, so
+# the fixtures are test inputs, not build output. They must be versioned or a
+# fresh clone has no working test suite.
+#
+# They are protected from publication by `"private": true` on the fixtures
+# package, not by .gitignore. Do not add them here.

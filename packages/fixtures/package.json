@@ -1,0 +1,12 @@
+{
+  "name": "@psx-data/fixtures",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Trimmed recorded PSX responses for offline parser tests",
+  "license": "MIT",
+  "type": "module",
+  "files": ["data"],
+  "exports": {
+    "./data/*": "./data/*"
+  }
+}

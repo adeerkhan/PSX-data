@@ -1,0 +1,29 @@
+{
+  "name": "@psx-data/server",
+  "version": "0.1.0",
+  "description": "Edge proxy for the PSX client: CORS, key custody, caching, rate limiting",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --force"
+  },
+  "dependencies": {
+    "@psx-data/client": "0.1.0"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}

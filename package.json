@@ -1,0 +1,28 @@
+{
+  "name": "psx-data-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "description": "TypeScript client libraries for the Pakistan Stock Exchange",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "typecheck": "tsc --build --force",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "record": "node scripts/record-fixtures.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
