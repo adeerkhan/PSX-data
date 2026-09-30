@@ -1,9 +1,9 @@
-# psx-data
+# psx-data-api
 
-[![npm version](https://img.shields.io/npm/v/psx-data.svg)](https://www.npmjs.com/package/psx-data)
-[![npm downloads](https://img.shields.io/npm/dm/psx-data.svg)](https://www.npmjs.com/package/psx-data)
-[![license](https://img.shields.io/npm/l/psx-data.svg)](https://opensource.org/licenses/MIT)
-[![types](https://img.shields.io/npm/types/psx-data.svg)](https://www.typescriptlang.org/)
+[![npm version](https://img.shields.io/npm/v/psx-data-api.svg)](https://www.npmjs.com/package/psx-data-api-api)
+[![npm downloads](https://img.shields.io/npm/dm/psx-data-api.svg)](https://www.npmjs.com/package/psx-data-api-api)
+[![license](https://img.shields.io/npm/l/psx-data-api.svg)](https://opensource.org/licenses/MIT)
+[![types](https://img.shields.io/npm/types/psx-data-api.svg)](https://www.typescriptlang.org/)
 [![node](https://img.shields.io/badge/node-%3E%3D20.19-5FA04E.svg)](https://nodejs.org)
 [![tested against live PSX](https://img.shields.io/badge/verified-live-3D9970.svg)](#development)
 
@@ -14,7 +14,7 @@ Plain typed arrays. Real numbers. `null` for absent values — never a formatted
 string, never a misleading `0`.
 
 ```ts
-import { createPsxClient } from 'psx-data';
+import { createPsxClient } from 'psx-data-api';
 
 const psx = createPsxClient();
 
@@ -30,7 +30,7 @@ hbl.changePct; // 0.41    — number | null
 ## Install
 
 ```sh
-npm install psx-data
+npm install psx-data-api
 ```
 
 Requires Node 20.19+ (or any runtime with a global `fetch`). Ships ESM with
@@ -170,7 +170,7 @@ A gated outage costs you `changePct` and index membership — not your data.
 ## Errors
 
 ```ts
-import { PsxAuthError, isPsxError } from 'psx-data';
+import { PsxAuthError, isPsxError } from 'psx-data-api';
 
 try {
   await psx.company('HBL');
@@ -261,4 +261,4 @@ commercial product.
 
 ## License
 
-MIT © Adeer Khan
+MIT. See [LICENSE](LICENSE).
