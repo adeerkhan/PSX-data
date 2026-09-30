@@ -3,6 +3,17 @@
   "version": "0.1.0",
   "description": "Typed client for Pakistan Stock Exchange market data: live quotes, OHLCV history, indices, and sectors. Plain arrays and nulls, never formatted strings.",
   "license": "MIT",
+  "author": {
+    "name": "Adeer Khan"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adeerkhan/PSX-data.git"
+  },
+  "bugs": {
+    "url": "https://github.com/adeerkhan/PSX-data/issues"
+  },
+  "homepage": "https://github.com/adeerkhan/PSX-data#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

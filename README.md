@@ -1,5 +1,12 @@
 # psx-data
 
+[![npm version](https://img.shields.io/npm/v/psx-data.svg)](https://www.npmjs.com/package/psx-data)
+[![npm downloads](https://img.shields.io/npm/dm/psx-data.svg)](https://www.npmjs.com/package/psx-data)
+[![license](https://img.shields.io/npm/l/psx-data.svg)](https://opensource.org/licenses/MIT)
+[![types](https://img.shields.io/npm/types/psx-data.svg)](https://www.typescriptlang.org/)
+[![node](https://img.shields.io/badge/node-%3E%3D20.19-5FA04E.svg)](https://nodejs.org)
+[![tested against live PSX](https://img.shields.io/badge/verified-live-3D9970.svg)](#development)
+
 Typed client for the Pakistan Stock Exchange. Live quotes, five years of OHLCV
 history, indices, sectors, and the full security directory.
 
@@ -236,9 +243,9 @@ blocks some cloud ranges; a deployment in South Asia works more reliably.
 
 ```sh
 npm install
-npm run check     # typecheck + 85 offline tests
-npm run verify    # 71 differential checks against live PSX
-npm run record    # refresh recorded fixtures
+npm run check
+npm run verify
+npm run record
 ```
 
 Tests run entirely against recorded fixtures and never touch the network. `npm
@@ -254,4 +261,4 @@ commercial product.
 
 ## License
 
-MIT
+MIT © Adeer Khan
