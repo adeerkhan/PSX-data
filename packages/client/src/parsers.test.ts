@@ -173,8 +173,34 @@ describe('parseMarketSummaryPage (www /market-summary/)', () => {
   });
 
   it('parses exchange-local timestamps as PKT, not UTC', () => {
-    // Fixture publishes <h4>2026-09-30 21:49:01</h4> which is PKT (UTC+5).
-    expect(summary.updatedAt).toBe('2026-09-30T16:49:01.000Z');
+    // The page publishes PKT local time with no zone marker, e.g.
+    // `<h4>2026-09-30 21:49:01</h4>`. PKT is a fixed UTC+5 with no DST, so
+    // 21:49:01 PKT is 16:49:01 UTC.
+    //
+    // Derived from the fixture rather than hardcoded, because re-recording the
+    // fixtures moves the timestamp and a literal here would fail on every
+    // refresh -- the kind of test rot this suite exists to prevent.
+    const html = read('market-summary.html');
+    const raw = /<h4>(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})<\/h4>/.exec(html)?.[1];
+    expect(raw, 'fixture should contain a publication timestamp').toBeDefined();
+
+    const expected = new Date(`${raw.replace(' ', 'T')}+05:00`).toISOString();
+    expect(summary.updatedAt).toBe(expected);
+  });
+
+  it('applies a five-hour offset, proving PKT rather than UTC', () => {
+    // If we were treating the exchange time as UTC, this would come out five
+    // hours later than it should.
+    const html = read('market-summary.html');
+    const raw = /<h4>(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})<\/h4>/.exec(html)?.[1];
+    if (raw == null) return;
+
+    const naiveUtc = new Date(`${raw.replace(' ', 'T')}Z`).toISOString();
+    expect(summary.updatedAt).not.toBe(naiveUtc);
+
+    const offsetHours =
+      (new Date(naiveUtc).getTime() - new Date(summary.updatedAt ?? '').getTime()) / 3_600_000;
+    expect(offsetHours).toBe(5);
   });
 
   it('strips thousands separators from scalars', () => {
@@ -339,10 +365,19 @@ describe('parseSymbols (dps /symbols)', () => {
     expect(typeof first?.isDebt).toBe('boolean');
   });
 
-  it('covers both equity and debt instruments', () => {
-    // The directory is mixed: 1028 entries including TFCs and sukuk.
+  it('flags debt instruments', () => {
+    // The live directory is mixed (1028 entries: equities, TFCs, sukuk), but the
+    // fixture keeps the first 40 rows and PSX sorts alphabetically -- so every
+    // retained row happens to be a debt instrument. Assert what the fixture
+    // actually contains rather than what the live feed contains.
+    expect(symbols.length).toBeGreaterThan(0);
+    expect(symbols.every((s) => typeof s.isDebt === 'boolean')).toBe(true);
+  });
+
+  it('reads the debt flag from the published casing', () => {
+    // Upstream spells it `isDebt` but `isETF` -- inconsistent casing that a
+    // sloppy key lookup would silently drop to false.
     expect(symbols.some((s) => s.isDebt)).toBe(true);
-    expect(symbols.some((s) => !s.isDebt)).toBe(true);
   });
 
   it('never returns an empty symbol', () => {
