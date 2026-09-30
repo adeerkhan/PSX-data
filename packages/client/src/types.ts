@@ -130,12 +130,6 @@ export interface IndexConstituent {
   sector: string | null;
   /** Index weight as a percentage, e.g. `1.83` meaning 1.83%. */
   weightPct: number | null;
-  /** Index points contributed. */
-  indexPoints: number | null;
-  /** Free float in millions of shares. */
-  freeFloatMn: number | null;
-  /** Market capitalisation in millions of PKR. */
-  marketCapMn: number | null;
   updatedAt: Timestamp | null;
 }
 
@@ -148,7 +142,14 @@ export interface SectorSummary {
   unchanged: number | null;
   /** Aggregate traded volume in shares. */
   volume: number | null;
-  /** Aggregate turnover in PKR. */
+  /**
+   * PKR turnover.
+   *
+   * Always `null` on this endpoint: PSX's own "Turnover" column is a share
+   * volume, not a PKR amount (see {@link SectorSummary.volume}). Kept because a
+   * future endpoint may publish a genuine PKR figure; do not map PSX's
+   * "Turnover" header onto it.
+   */
   turnover: number | null;
   /** Aggregate market capitalisation in billions of PKR. */
   marketCapBn: number | null;
@@ -206,106 +207,4 @@ export interface CompanyProfile {
    * `Open`, `LDCP`, and `Free Float`.
    */
   warnings: string[];
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Read a nullable price with a fallback.
- *
- * Use when a default is genuinely meaningful (e.g. rendering "N/A" as 0 in a
- * chart). Never use it to feed an aggregate -- a 0 price corrupts the average.
- */
-export function priceOr<T>(value: number | null | undefined, fallback: T): number | T {
-  return value == null ? fallback : value;
-}
-
-/** True when the quote carries a usable traded price. */
-export function hasPrice(quote: Pick<Quote, 'current'>): boolean {
-  return quote.current != null;
-}
-
-/** True when the security moved up vs its previous close. */
-export function isUp(quote: Pick<Quote, 'change'>): boolean {
-  return quote.change != null && quote.change > 0;
-}
-
-/** True when the security moved down vs its previous close. */
-export function isDown(quote: Pick<Quote, 'change'>): boolean {
-  return quote.change != null && quote.change < 0;
-}
-
-/**
- * Convert row-major rows into a columnar view for column-oriented maths.
- *
- * The inverse of nothing in particular -- it is a one-way lens. Use it when you
- * need to compute over a whole column (a sector average, a max-drawdown scan);
- * ignore it otherwise. Column order matches the input row's key order, so a
- * heterogeneous input yields only the union of keys present on the first row.
- *
- * @example
- * ```ts
- * const col = toColumnar(quotes)
- * const maxVol = Math.max(...col.volume.filter((v): v is number => v != null))
- * ```
- */
-export function toColumnar<T extends Record<string, unknown>>(
-  rows: readonly T[],
-): { [K in keyof T]: Array<T[K]> } {
-  const columns = {} as { [K in keyof T]: Array<T[K]> };
-  const first = rows[0];
-  if (first == null) {
-    return columns;
-  }
-  for (const key of Object.keys(first) as Array<keyof T>) {
-    columns[key] = rows.map((row) => row[key]);
-  }
-  return columns;
-}
-
-/**
- * Group rows by a derived key.
- *
- * Replaces `groupBy` from every table library we surveyed. Keeps insertion
- * order, which makes output deterministic and therefore snapshot-testable.
- */
-export function groupBy<T, K extends string>(
-  rows: readonly T[],
-  keyOf: (row: T) => K,
-): Map<K, T[]> {
-  const groups = new Map<K, T[]>();
-  for (const row of rows) {
-    const key = keyOf(row);
-    const bucket = groups.get(key);
-    if (bucket == null) {
-      groups.set(key, [row]);
-    } else {
-      bucket.push(row);
-    }
-  }
-  return groups;
-}
-
-/**
- * Render rows as RFC 4180 CSV.
- *
- * Nulls become empty fields, never `0` or `"null"` -- the same rule as
- * everywhere else in this library.
- */
-export function toCsv<T extends Record<string, unknown>>(
-  rows: readonly T[],
-  columns: ReadonlyArray<keyof T & string>,
-): string {
-  const escape = (value: unknown): string => {
-    if (value == null) return '';
-    const s = String(value);
-    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const lines = [columns.join(',')];
-  for (const row of rows) {
-    lines.push(columns.map((column) => escape(row[column])).join(','));
-  }
-  return lines.join('\n');
 }

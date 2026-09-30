@@ -43,6 +43,7 @@ const read = (name: string): string => readFileSync(join(FIXTURE_DIR, name), 'ut
 const readJson = (name: string): unknown => JSON.parse(read(name));
 
 const URL_MW = 'https://dps.psx.com.pk/market-watch';
+const SECTOR_URL = 'https://dps.psx.com.pk/sector-summary/sectorwise';
 const URL_MS = 'https://www.psx.com.pk/market-summary/';
 
 describe('parseMarketWatch (dps /market-watch)', () => {
@@ -510,11 +511,53 @@ describe('HTML entity parsers', () => {
     expect(Array.isArray(constituents)).toBe(true);
   });
 
-  it('parses sector summaries when present', () => {
-    // Sector summary is an HTML page whose table shape varies; the parser must
-    // not throw on absence.
-    expect(() =>
-      parseSectorSummaries(read('listings-nc.html'), 'https://dps.psx.com.pk/sector-summary/sectorwise'),
-    ).not.toThrow();
+  it('parses only the sector table, not the 38 nested market-watch tables', () => {
+    // Regression guard. The sector-summary page holds 39 tables: one 7-column
+    // sector table plus 38 nested market-watch tables. A global `thead th` read
+    // concatenated them all, so `find(['VOLUME'])` resolved to index 10 -- a
+    // market-watch column -- and the parser reported 595 rows with garbage
+    // turnover/volume/market-cap for what are actually 38 sectors.
+    const sectors = parseSectorSummaries(read('sector-summary.html'), `${SECTOR_URL}`);
+    expect(sectors.length).toBeGreaterThan(20);
+    expect(sectors.length).toBeLessThan(60);
+  });
+
+  it('reads real values from the sector table', () => {
+    const sectors = parseSectorSummaries(read('sector-summary.html'), `${SECTOR_URL}`);
+    const automobile = sectors.find((s) => s.sector.code === '0801');
+    expect(automobile).toBeDefined();
+    // Live values: Advance 9, Decline 1, Unchange 0, Turnover 1,183,350,
+    // Market Cap. 698.77 (billions PKR).
+    expect(automobile?.sector.name).toBe('AUTOMOBILE ASSEMBLER');
+    expect(automobile?.advanced).toBe(9);
+    expect(automobile?.declined).toBe(1);
+    expect(automobile?.unchanged).toBe(0);
+    expect(automobile?.volume).toBe(1_183_350);
+    expect(automobile?.marketCapBn).toBeCloseTo(698.77, 2);
+  });
+
+  it('never reports a zero volume where the exchange published shares', () => {
+    // The old bug mapped a market-watch column into `volume`, yielding zeros.
+    const sectors = parseSectorSummaries(read('sector-summary.html'), `${SECTOR_URL}`);
+    for (const sector of sectors) {
+      if (sector.volume == null) continue;
+      expect(sector.volume, `${sector.sector.code} volume`).toBeGreaterThan(0);
+    }
+  });
+
+  it('skips rows whose code is not numeric', () => {
+    // The name cell carries a stray `data-order="<SECTOR NAME>"` upstream; a
+    // row without a numeric code is a header or spacer, not a sector.
+    const sectors = parseSectorSummaries(read('sector-summary.html'), `${SECTOR_URL}`);
+    expect(sectors.every((s) => /^\d{4}$/.test(s.sector.code))).toBe(true);
+    expect(sectors.every((s) => s.sector.name !== '')).toBe(true);
+  });
+
+  it('throws PsxSchemaError when handed a page with no sector table', () => {
+    // Previously this passed `listings-nc.html` and only asserted "no throw",
+    // which is why a wrong parser looked green.
+    expect(() => parseSectorSummaries(read('listings-nc.html'), `${SECTOR_URL}`)).toThrow(
+      PsxSchemaError,
+    );
   });
 });

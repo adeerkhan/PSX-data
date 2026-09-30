@@ -14,7 +14,7 @@
       "require": "./dist/index.cjs"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "!dist/.tsbuildinfo"],
   "sideEffects": false,
   "scripts": {
     "build": "tsc --build",

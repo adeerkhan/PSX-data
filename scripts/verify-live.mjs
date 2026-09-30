@@ -316,8 +316,13 @@ async function main() {
   const idxRe = new RegExp(`data-code="${kse?.code}"[^>]*>.*?data-order="([\\d.]+)"[^>]*>[^<]*</td>\\s*<td[^>]*data-order="([\\d.]+)"[^>]*>[^<]*</td>\\s*<td[^>]*data-order="([\\d.]+)"[^>]*>[^<]*</td>\\s*<td[^>]*data-order="(-?[\\d.]+)"[^>]*>.*?</td>\\s*<td[^>]*data-order="(-?[\\d.]+)"`, 's');
   const idxRaw = idxRe.exec(idxHtml);
   if (idxRaw != null) {
-    check('KSE100 high matches independent read', kse?.value === undefined || true, `${kse?.value}`);
+    // Regex groups, in order: high, low, current, change, %change.
     check('independent read found KSE100 row', idxRaw[0].includes('KSE100'));
+    check('KSE100 current matches independent read', kse?.value === Number(idxRaw[3]), `parser=${kse?.value} regex=${idxRaw[3]}`);
+    check('KSE100 change matches independent read', Math.abs((kse?.change ?? 0) - Number(idxRaw[4])) < 1e-6, `parser=${kse?.change} regex=${idxRaw[4]}`);
+    check('KSE100 changePct matches independent read', Math.abs((kse?.changePct ?? 0) - Number(idxRaw[5])) < 1e-6, `parser=${kse?.changePct} regex=${idxRaw[5]}`);
+  } else {
+    check('independent read located the KSE100 table row', false, 'regex did not match');
   }
 
   // -- company (previously only tautologically tested) ---------------------

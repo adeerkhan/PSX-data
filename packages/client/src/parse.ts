@@ -165,16 +165,6 @@ export function parseVolume(input: string | number | null | undefined): number |
   return Math.round(value);
 }
 
-/**
- * Parse a percentage from a value that may or may not carry a `%` sign.
- *
- * Preserves the numeric magnitude as published -- `"0.76%"` becomes `0.76`,
- * not `0.0076`. PSX publishes whole-number percentages; callers wanting a
- * fraction divide by 100.
- */
-export function parsePercent(input: string | number | null | undefined): number | null {
-  return parseNumber(input);
-}
 
 /**
  * Convert Unix seconds to an ISO-8601 UTC timestamp.

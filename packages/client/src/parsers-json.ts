@@ -22,7 +22,7 @@ import {
   epochSecondsToIso,
 } from './parse.js';
 import { PsxSchemaError, PsxParseError } from './errors.js';
-import { SELECTORS, SELECTOR_VERSION } from './selectors.js';
+import { SELECTORS, SELECTOR_VERSION, assertMatched } from './selectors.js';
 import type {
   Bar,
   CompanyProfile,
@@ -507,9 +507,6 @@ export function parseConstituents(html: string, url: string, indexCode: string):
       name: cells.eq(0).find('a').attr('data-title') ?? null,
       sector: cells.eq(1).text().trim() || null,
       weightPct: parseNumber(cells.eq(2).attr('data-order') ?? cells.eq(2).text()),
-      indexPoints: null,
-      freeFloatMn: null,
-      marketCapMn: null,
       updatedAt: null,
     });
   });
@@ -638,51 +635,123 @@ export function parseCompanyProfile(html: string, url: string, symbol: string): 
 export function parseSectorSummaries(html: string, url: string): SectorSummary[] {
   const $ = cheerio.load(html);
 
-  const headers = $('thead th')
+  // The page holds 39 tables. Only the FIRST is the sector table (7 columns);
+  // the other 38 are nested market-watch tables with 10 columns each.
+  //
+  // Reading `$('thead th')` globally concatenates all of them, so a global
+  // `findIndex('VOLUME')` resolves to index 10 -- a market-watch column, not a
+  // sector column. That produced 595 rows with garbage turnover/volume/market-cap
+  // fields. So scope to the table that actually has sector headers.
+  const sectorTable = findSectorTable($);
+  assertMatched('sector-summary rows', SELECTORS.sectorSummary.row, sectorTable.length, url);
+
+  const headers = sectorTable
+    .first()
+    .closest('table')
+    .find('thead th')
     .map((_, el) => $(el).text().trim().toUpperCase())
     .get();
-
-  if (headers.length === 0) {
-    throw new PsxSchemaError('sector-summary: no <thead> headers found', {
-      url,
-      selectorVersion: SELECTOR_VERSION,
-    });
-  }
 
   const find = (names: readonly string[]): number =>
     headers.findIndex((header) => names.some((name) => header.includes(name)));
 
-  const sectorAt = find(['SECTOR', 'NAME']);
-  const advancedAt = find(['ADVANCED']);
-  const declinedAt = find(['DECLINED']);
-  const unchangedAt = find(['UNCHANGED']);
-  const volumeAt = find(['VOLUME']);
-  const turnoverAt = find(['VALUE', 'TURNOVER']);
-  const capAt = find(['MARKET CAP', 'MCAP', 'CAP']);
+  // Verified 2026-09-30 header text:
+  //   [Sector Code | Sector Name | Advance | Decline | Unchange | Turnover | Market Cap. (B)]
+  //
+  // Note the singular "Advance"/"Decline"/"Unchange" -- the market-watch tables
+  // use plural "Advanced"/"Declined", which is why matching must be exact-ish and
+  // scoped to this table.
+  const sectorCodeAt = find(['SECTOR CODE']);
+  const sectorNameAt = find(['SECTOR NAME']);
+  const advancedAt = find(['ADVANCE']);
+  const declinedAt = find(['DECLINE']);
+  const unchangedAt = find(['UNCHANGE']);
+  const volumeAt = find(['VOLUME', 'TURNOVER']);
+  const capAt = find(['MARKET CAP', 'MCAP']);
+
+  // "Sector Code" and "Sector Name" must both resolve; without them we would be
+  // reading the wrong table and silently producing nonsense.
+  for (const [label, at] of [
+    ['Sector Code', sectorCodeAt],
+    ['Sector Name', sectorNameAt],
+    ['Advance', advancedAt],
+  ] as const) {
+    if (at < 0) {
+      throw new PsxSchemaError(
+        `sector-summary: could not locate column "${label}" in [${headers.join(', ')}]`,
+        { url, selectorVersion: SELECTOR_VERSION, actual: headers.join(', ') },
+      );
+    }
+  }
 
   const summaries: SectorSummary[] = [];
 
-  $('tbody tr, table tr').each((_, element) => {
+  sectorTable.each((_, element) => {
     const row = $(element);
     const cells = row.find('td');
     if (cells.length === 0) return;
 
-    const sectorName = cells.eq(sectorAt < 0 ? 0 : sectorAt).text().trim();
-    if (sectorName === '') return;
+    const code = cells.eq(sectorCodeAt).text().trim();
+    const name = cells.eq(sectorNameAt).text().trim();
+    // Sector codes are numeric (`0801`); a non-numeric first cell means we are
+    // reading a header or spacer row, not a sector.
+    if (name === '' || !/^\d+$/.test(code)) return;
+
+    const cellNum = (at: number): number | null => {
+      if (at < 0) return null;
+      const cell = cells.eq(at);
+      // `data-order` is the machine value where present. The name cell carries a
+      // stray `data-order` upstream, but we never read that cell numerically.
+      const machine = cell.attr('data-order');
+      return parseNumber(machine ?? cell.text());
+    };
 
     summaries.push({
-      sector: { code: '', name: sectorName },
-      advanced: parseNumber(cells.eq(advancedAt < 0 ? -1 : advancedAt).attr('data-order') ?? '') ?? null,
-      declined: parseNumber(cells.eq(declinedAt < 0 ? -1 : declinedAt).attr('data-order') ?? '') ?? null,
-      unchanged: parseNumber(cells.eq(unchangedAt < 0 ? -1 : unchangedAt).attr('data-order') ?? '') ?? null,
-      volume: parseVolume(cells.eq(volumeAt < 0 ? -1 : volumeAt).attr('data-order') ?? ''),
-      turnover: parsePrice(cells.eq(turnoverAt < 0 ? -1 : turnoverAt).attr('data-order') ?? ''),
-      marketCapBn: parseNumber(cells.eq(capAt < 0 ? -1 : capAt).attr('data-order') ?? ''),
+      sector: { code, name },
+      advanced: cellNum(advancedAt),
+      declined: cellNum(declinedAt),
+      unchanged: cellNum(unchangedAt),
+      // PSX labels the traded-share column "Turnover"; it is a volume in shares.
+      volume: cellNum(volumeAt) == null ? null : Math.round(cellNum(volumeAt) ?? 0),
+      // "Turnover" in PSX's own vocabulary is share volume, not PKR. This page
+      // publishes no separate PKR turnover column, so it is absent by design.
+      turnover: null,
+      // "Market Cap. (B)" is billions of PKR. It carries no `data-order`, so the
+      // formatted text ("1,539.34") is parsed instead.
+      marketCapBn: cellNum(capAt),
       updatedAt: null,
     });
   });
 
   return summaries;
+}
+
+/**
+ * Locate the rows of the sector-summary table.
+ *
+ * Identified by shape rather than position: a table whose headers include both
+ * "Sector Code" and "Sector Name". Using `table:first` would work today but
+ * breaks the moment PSX inserts a banner table above it.
+ */
+function findSectorTable($: cheerio.CheerioAPI): ReturnType<cheerio.CheerioAPI> {
+  const selector = SELECTORS.sectorSummary.row;
+  let matched = $();
+
+  $('table').each((_, table) => {
+    if (matched.length > 0) return;
+    const headers = $(table)
+      .find('thead th')
+      .map((_, el) => $(el).text().trim().toUpperCase())
+      .get();
+    const hasSectorHeaders =
+      headers.some((h) => h.includes('SECTOR CODE')) &&
+      headers.some((h) => h.includes('SECTOR NAME'));
+    if (hasSectorHeaders) {
+      matched = $(table).find(selector);
+    }
+  });
+
+  return matched;
 }
 
 export type { SectorSummary };

@@ -15,7 +15,9 @@
     "typecheck": "tsc --build --force",
     "test": "vitest run",
     "test:watch": "vitest",
-    "record": "node scripts/record-fixtures.mjs"
+    "record": "node scripts/record-fixtures.mjs",
+    "verify": "node scripts/verify-live.mjs",
+    "check": "npm run typecheck && npm run test"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

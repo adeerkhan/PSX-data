@@ -160,6 +160,7 @@ async function record() {
     { name: 'indices', url: `${HOSTS.dps}/indices`, anchor: 'topIndices__item__name', keepBefore: 4000 },
     { name: 'company-hbl', url: `${HOSTS.dps}/company/HBL`, anchor: 'stats_label', keepBefore: 8000 },
     { name: 'listings-nc', url: `${HOSTS.dps}/listings-table/main/nc`, anchor: '<thead', keepBefore: 4000 },
+    { name: 'sector-summary', url: `${HOSTS.dps}/sector-summary/sectorwise`, anchor: 'Sector Code', keepBefore: 4000 },
   ];
 
   const jsonTargets = [

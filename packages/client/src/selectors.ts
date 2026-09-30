@@ -57,12 +57,6 @@ export const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36';
 
-/**
- * The Origin PSX's WAF allowlists. Any other origin gets 403 with a
- * zero-length body. We send it deliberately -- omitting `Origin` also works,
- * but sending the allowlisted value is more honest about what we are.
- */
-export const ALLOWED_ORIGIN = HOSTS.dps;
 
 /** Column headers on dps `/market-watch`, in order. Verified 2026-09-30. */
 export const MARKET_WATCH_HEADERS = [
@@ -79,17 +73,6 @@ export const MARKET_WATCH_HEADERS = [
   'VOLUME',
 ] as const;
 
-/** Column headers on www `/market-summary/` rows, in order. */
-export const MARKET_SUMMARY_HEADERS = [
-  'SCRIP',
-  'LDCP',
-  'OPEN',
-  'HIGH',
-  'LOW',
-  'CURRENT',
-  'CHANGE',
-  'VOLUME',
-] as const;
 
 /**
  * CSS selectors, grouped by source and endpoint.
@@ -134,14 +117,10 @@ export const SELECTORS = {
     symbolCell: 'td.dataportal[data-srip]',
     /** The symbol itself. */
     symbolAttr: 'data-srip',
-    /** Sector group header rows, used to attribute each table to its sector. */
-    sectorHeader: 'h4',
     /** Market-wide scalars, matched by their label text. */
     summaryLabel: 'p > span',
     /** The publication timestamp, `<h4>2026-09-30 21:33:02</h4>`. */
     timestamp: 'h4',
-    /** "No Data found!" empty states -- 2 present on the live page. */
-    emptyState: 'td, div',
   },
 
   /**
@@ -175,18 +154,30 @@ export const SELECTORS = {
     headerRow: 'thead th',
   },
 
+  /**
+   * dps `/sector-summary/sectorwise`.
+   *
+   * The page holds 39 tables: 1 sector table (7 columns, 38 rows) followed by 38
+   * nested market-watch tables (10 columns each). The sector table is located by
+   * its headers, not by position -- see `findSectorTable`.
+   */
+  sectorSummary: {
+    /** Data rows within the sector table. */
+    row: 'tbody tr',
+    /** Machine values where present; the market-cap column has none. */
+    sectorCodeCell: 'td:nth-child(1)',
+    sectorNameCell: 'td:nth-child(2)',
+  },
+
   /** dps `/company/{SYMBOL}`. */
   company: {
     /** Label/value stat pairs. */
     statLabel: 'div.stats_label',
-    statValue: 'div.stats_value',
     /**
      * Description container. Upstream's own misspelling `--decription` is
      * load-bearing and must be matched exactly.
      */
     description: 'div.profile__item--decription',
-    /** Company display name. */
-    title: 'h1, h2',
   },
 } as const;
 

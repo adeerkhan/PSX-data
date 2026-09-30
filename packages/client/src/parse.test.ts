@@ -15,7 +15,6 @@ import {
   parseList,
   parseNumber,
   parsePktTimestamp,
-  parsePercent,
   parsePrice,
   parseSignedPrice,
   parseVolume,
@@ -138,12 +137,6 @@ describe('parseInteger / parseVolume', () => {
   });
 });
 
-describe('parsePercent', () => {
-  it('preserves magnitude, without rescaling to a fraction', () => {
-    expect(parsePercent('0.76%')).toBe(0.76);
-    expect(parsePercent('-2.42%')).toBe(-2.42);
-  });
-});
 
 describe('parseList', () => {
   it('splits comma-separated index memberships', () => {
