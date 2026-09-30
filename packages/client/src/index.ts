@@ -13,6 +13,11 @@
  * ```
  */
 
+export { createPsxClient, PsxClient } from './client.js';
+export type { PsxClientOptions, Sourced } from './client.js';
+export { createTransport, Transport } from './transport.js';
+export type { TransportOptions } from './transport.js';
+
 export { parseMarketWatch, parseMarketSummaryPage } from './parsers.js';
 
 export {
@@ -42,7 +47,21 @@ export {
 
 export { BROWSER_UA, HOSTS, MARKET_WATCH_HEADERS, SELECTORS, SELECTOR_VERSION } from './selectors.js';
 
-export { PsxError, PsxParseError, PsxSchemaError, isPsxError } from './errors.js';
+export {
+  PsxAbortError,
+  PsxAuthError,
+  PsxConfigError,
+  PsxError,
+  PsxNetworkError,
+  PsxNotFoundError,
+  PsxParseError,
+  PsxRateLimitError,
+  PsxSchemaError,
+  PsxTimeoutError,
+  isPsxError,
+} from './errors.js';
+
+export type { Diagnostics, PsxErrorCode } from './errors.js';
 
 export type {
   Bar,

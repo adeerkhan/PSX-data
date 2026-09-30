@@ -22,12 +22,19 @@ import type { Timestamp } from './types.js';
 /**
  * Discriminator carried by every error this library throws.
  *
- * Deliberately short: only the codes something actually raises are listed. An
- * earlier revision enumerated AUTH/NOT_FOUND/RATE_LIMITED/TIMEOUT/NETWORK/CONFIG/
- * ABORTED for HTTP conditions -- but no code existed to throw them, so the list
- * documented intent rather than behaviour. Re-add entries at the point of use.
+ * Every entry is raised by a named class below. Kept in one place so a caller
+ * can switch on `code` without catching each class.
  */
-export type PsxErrorCode = 'SCHEMA' | 'PARSE';
+export type PsxErrorCode =
+  | 'AUTH'
+  | 'NOT_FOUND'
+  | 'RATE_LIMITED'
+  | 'TIMEOUT'
+  | 'NETWORK'
+  | 'SCHEMA'
+  | 'CONFIG'
+  | 'ABORTED'
+  | 'PARSE';
 
 /** Base class for every error raised by this library. */
 export class PsxError extends Error {
@@ -105,4 +112,97 @@ export class PsxParseError extends PsxError {
     super('PARSE', message, options);
     this.raw = raw.slice(0, 200);
   }
+}
+/**
+ * HTTP 403 -- PSX rejected the request.
+ *
+ * Raised when a stale or refused `X-Req-Id` survives one automatic refresh, so
+ * a retry is unlikely to help.
+ */
+export class PsxAuthError extends PsxError {
+  override readonly code = 'AUTH' as const;
+
+  constructor(message: string, options: { url?: string | null; cause?: unknown } = {}) {
+    super('AUTH', message, options);
+  }
+}
+
+/**
+ * HTTP 404 -- PSX did not recognise the request.
+ *
+ * Usually a missing `X-Requested-With` header or a path that does not exist
+ * (a delisted symbol, say).
+ */
+export class PsxNotFoundError extends PsxError {
+  override readonly code = 'NOT_FOUND' as const;
+
+  constructor(message: string, options: { url?: string | null; cause?: unknown } = {}) {
+    super('NOT_FOUND', message, options);
+  }
+}
+
+/** HTTP 429 -- rate limited. */
+export class PsxRateLimitError extends PsxError {
+  override readonly code = 'RATE_LIMITED' as const;
+  /** PSX-supplied retry hint in seconds, when present. */
+  readonly retryAfter: number | null;
+
+  constructor(
+    message: string,
+    options: { url?: string | null; retryAfter?: number | null; cause?: unknown } = {},
+  ) {
+    super('RATE_LIMITED', message, options);
+    this.retryAfter = options.retryAfter ?? null;
+  }
+}
+
+/** The request exceeded the configured timeout. */
+export class PsxTimeoutError extends PsxError {
+  override readonly code = 'TIMEOUT' as const;
+  readonly timeoutMs: number;
+
+  constructor(timeoutMs: number, options: { url?: string | null; cause?: unknown } = {}) {
+    super('TIMEOUT', `Request timed out after ${timeoutMs}ms`, options);
+    this.timeoutMs = timeoutMs;
+  }
+}
+
+/** DNS failure, connection refused, TLS failure, or an unexpected status. */
+export class PsxNetworkError extends PsxError {
+  override readonly code = 'NETWORK' as const;
+
+  constructor(message: string, options: { url?: string | null; cause?: unknown } = {}) {
+    super('NETWORK', message, options);
+  }
+}
+
+/** The client was configured in a way that cannot work. */
+export class PsxConfigError extends PsxError {
+  override readonly code = 'CONFIG' as const;
+
+  constructor(message: string) {
+    super('CONFIG', message);
+  }
+}
+
+/** The request was aborted or timed out at the platform level. */
+export class PsxAbortError extends PsxError {
+  override readonly code = 'ABORTED' as const;
+
+  constructor(options: { url?: string | null; cause?: unknown } = {}) {
+    super('ABORTED', 'Request was aborted', options);
+  }
+}
+
+/**
+ * Operational status, for distinguishing a stale key from an unreachable host.
+ */
+export interface Diagnostics {
+  hasKey: boolean;
+  keyAgeMs: number | null;
+  keyAcquiredAt: string | null;
+  keyRefreshCount: number;
+  fallbackReachable: boolean | null;
+  cache: { hits: number; misses: number; size: number };
+  inFlight: number;
 }

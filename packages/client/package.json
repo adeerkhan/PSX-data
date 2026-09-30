@@ -1,29 +1,49 @@
 {
-  "name": "@psx-data/client",
+  "name": "psx-data",
   "version": "0.1.0",
-  "description": "TypeScript client for Pakistan Stock Exchange market data",
+  "description": "Typed client for Pakistan Stock Exchange market data: live quotes, OHLCV history, indices, and sectors. Plain arrays and nulls, never formatted strings.",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
   },
-  "files": ["dist", "!dist/.tsbuildinfo"],
+  "files": [
+    "dist",
+    "!dist/.tsbuildinfo",
+    "README.md",
+    "LICENSE"
+  ],
   "sideEffects": false,
+  "keywords": [
+    "psx",
+    "pakistan-stock-exchange",
+    "kse100",
+    "stock-market",
+    "market-data",
+    "ohlcv",
+    "karachi",
+    "finance",
+    "typescript"
+  ],
   "scripts": {
     "build": "tsc --build",
-    "typecheck": "tsc --build --force"
+    "typecheck": "tsc --build --force",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "cheerio": "^1.0.0"
   },
   "engines": {
     "node": ">=20.19"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
