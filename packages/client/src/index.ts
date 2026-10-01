@@ -14,6 +14,11 @@
  */
 
 export { createPsxClient, PsxClient } from './client.js';
+export type { CachePolicy, StreamTick } from './client.js';
+export { TtlCache, isMarketSession, sessionTtlMs } from './cache.js';
+export type { CacheOptions, CacheStats } from './cache.js';
+export { RateLimiter, poll } from './rate-limit.js';
+export type { RateLimiterOptions } from './rate-limit.js';
 export type { PsxClientOptions, Sourced } from './client.js';
 export { createTransport, Transport } from './transport.js';
 export type { TransportOptions } from './transport.js';

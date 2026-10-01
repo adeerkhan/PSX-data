@@ -54,13 +54,22 @@ describe('parseMarketWatch (dps /market-watch)', () => {
   });
 
   it('reads prices from data-order, not formatted text', () => {
-    // The live fixture's first row is PIBTL: text "73,446,994" beside
-    // data-order="73446994". Getting a number rather than a comma string proves
-    // we read the machine attribute.
+    // Derived from the fixture rather than hardcoded: these are live market
+    // values and change every session, so a literal here would fail on the
+    // next fixture refresh while telling us nothing about correctness.
+    const html = read('market-watch.html');
+    const row = /<td data-search="PIBTL"[\s\S]*?<\/tr>/.exec(html)?.[0] ?? '';
+    const volumeAttr = /data-order="(\d+)"/g;
+    let last: string | undefined;
+    for (const m of row.matchAll(volumeAttr)) last = m[1];
+
     const pibtl = quotes.find((q) => q.symbol === 'PIBTL');
     expect(pibtl).toBeDefined();
-    expect(pibtl?.volume).toBe(73_446_994);
     expect(typeof pibtl?.volume).toBe('number');
+    // The last data-order on the row is VOLUME.
+    expect(pibtl?.volume).toBe(Number(last));
+    // And crucially it is a number, not the formatted "25,714,456".
+    expect(String(pibtl?.volume)).not.toContain(',');
   });
 
   it('never yields NaN', () => {
@@ -163,15 +172,31 @@ describe('parseMarketSummaryPage (www /market-summary/)', () => {
   });
 
   it('extracts all seven market-wide scalars', () => {
-    // These exist on no other endpoint. Losing them is why we keep this source.
-    expect(summary.status).toBe('CLOSED');
-    expect(summary.volume).toBe(591_234_897);
-    expect(summary.value).toBe(20_191_629_499);
-    expect(summary.trades).toBe(295_473);
-    expect(summary.advanced).toBe(253);
-    expect(summary.declined).toBe(195);
-    expect(summary.unchanged).toBe(121);
-    expect(summary.total).toBe(569);
+    // These exist on no other endpoint, which is why this source is the
+    // fallback. Values are read back out of the fixture rather than hardcoded,
+    // since they are live totals that change every session.
+    const html = read('market-summary.html');
+    const scalar = (label: string): number | null => {
+      const m = new RegExp(`<p[^>]*>\\s*<span>\\s*${label}:?\\s*</span>\\s*([^<]*?)\\s*</p>`, 'i').exec(html);
+      if (m?.[1] == null) return null;
+      const text = m[1].replace(/,/g, '').trim();
+      return text === '' ? null : Number(text);
+    };
+
+    expect(summary.status).not.toBe('UNKNOWN');
+    expect(summary.volume).toBe(scalar('Volume'));
+    expect(summary.value).toBe(scalar('Value'));
+    expect(summary.trades).toBe(scalar('Trades'));
+    expect(summary.advanced).toBe(scalar('Advanced'));
+    expect(summary.declined).toBe(scalar('Declined'));
+    expect(summary.unchanged).toBe(scalar('Unchanged'));
+    expect(summary.total).toBe(scalar('Total'));
+  });
+
+  it('keeps the breadth arithmetic self-consistent', () => {
+    // PSX publishes these three plus a total; they must add up. If they do not,
+    // a parser mixed up a label rather than a value being wrong.
+    expect(summary.advanced! + summary.declined! + summary.unchanged!).toBe(summary.total);
   });
 
   it('parses exchange-local timestamps as PKT, not UTC', () => {
@@ -211,14 +236,59 @@ describe('parseMarketSummaryPage (www /market-summary/)', () => {
     expect(String(summary.volume)).not.toContain(',');
   });
 
-  it('reads negative changes across the decrease-rate span', () => {
-    // IMAGE trades at -0.13; the numeric text sits beside an empty
-    // decrease-rate span whose class is the only sign carrier.
-    const image = quotes.find((q) => q.symbol === 'IMAGE');
-    expect(image).toBeDefined();
-    expect(image?.change).toBe(-0.13);
-    expect(image?.volume).toBe(22_333);
-    expect(image?.ldcp).toBe(25.63);
+  it('parses the change cell that follows an empty direction span', () => {
+    // The CHANGE cell holds a direction span then the number:
+    //   <td> <span class="decrease-rate"></span> -0.13</td>
+    // The span is empty, so the sign lives in the text. A regression here once
+    // nulled every row whose change came through that span, silently reporting
+    // 17 of 48 symbols as unchanged.
+    //
+    // Read back from the fixture: whether a given security moved depends on the
+    // day, but the *shape* must always hold.
+    const html = read('market-summary.html');
+    const rows = [...html.matchAll(/data-srip="([A-Z0-9]+)"[\s\S]*?<\/tr>/g)];
+
+    // Two valid shapes exist, and the parser must handle both:
+    //   moved:      <span class="increase-rate"></span> 5.08
+    //   unchanged:  <span class="decrease-rate"></span>
+    // An unchanged security has no number, and its change must be null rather
+    // than 0 -- PSX publishes no value at all.
+    let sawMoved = false;
+    let sawUnchanged = false;
+    let sawNegative = false;
+
+    for (const match of rows) {
+      const rowHtml = match[0];
+      const symbol = match[1];
+      if (rowHtml == null || symbol == null) continue;
+      // Only the text between </span> and the closing </td> -- the volume cell
+      // that follows would otherwise be picked up as if it were the change.
+      const cellMatch = /(?:decrease|increase)-rate"><\/span>([^<]*)</.exec(rowHtml);
+      if (cellMatch == null) continue;
+      const numberMatch = /(-?[\d.]+)/.exec(cellMatch[1] ?? '');
+      const parsed = quotes.find((q) => q.symbol === symbol);
+      expect(parsed, `${symbol} should be parsed`).toBeDefined();
+
+      if (numberMatch == null) {
+        // No number after the span -> unchanged. Must be null, not 0.
+        sawUnchanged = true;
+        expect(parsed?.change, `${symbol} unchanged should be null`).toBeNull();
+        continue;
+      }
+
+      sawMoved = true;
+      const expected = Number(numberMatch[1]);
+      expect(parsed?.change, `${symbol} change`).toBe(expected);
+
+      if (expected < 0) {
+        sawNegative = true;
+        expect(parsed?.change, `${symbol} decline must not be null`).not.toBeNull();
+      }
+    }
+
+    expect(sawMoved, 'fixture should contain at least one moved row').toBe(true);
+    expect(sawNegative, 'fixture should contain at least one declining row').toBe(true);
+    expect(sawUnchanged, 'fixture should contain at least one unchanged row').toBe(true);
   });
 
   it('reads the company name from the symbol cell text', () => {
@@ -428,10 +498,17 @@ describe('HTML entity parsers', () => {
     const indices = parseIndices(read('indices.html'), 'https://dps.psx.com.pk/indices');
     expect(indices.length).toBeGreaterThan(5);
 
+    // Derived from the fixture: index levels are live and change every session.
+    const html = read('indices.html');
+    const row = /data-code="KSE100"[\s\S]*?<\/tr>/.exec(html)?.[0] ?? '';
+    const values = [...row.matchAll(/data-order="(-?[\d.]+)"/g)].map((m) => Number(m[1]));
+
     const kse100 = indices.find((i) => i.code === 'KSE100');
-    expect(kse100?.value).toBe(169_969.32);
-    expect(kse100?.change).toBeCloseTo(368.92, 2);
-    expect(kse100?.changePct).toBeCloseTo(0.2175, 3);
+    expect(kse100).toBeDefined();
+    // Table is [High, Low, Current, Change, %Change].
+    expect(kse100?.value).toBe(values[2]);
+    expect(kse100?.change).toBeCloseTo(values[3]!, 6);
+    expect(kse100?.changePct).toBeCloseTo(values[4]!, 6);
 
     // The fixture contains declining indices too; their change must be negative.
     const decliners = indices.filter((i) => i.change != null && i.change < 0);
@@ -504,11 +581,38 @@ describe('HTML entity parsers', () => {
     expect(profile.warnings.some((w) => w.includes('appears') && w.includes('times'))).toBe(true);
   });
 
-  it('parses the listings table', () => {
-    const constituents = parseConstituents(read('listings-nc.html'), 'https://dps.psx.com.pk/listings-table/main/nc', 'NC');
-    // Parsing without throwing is the bar: the listings table's exact column set
-    // varies per counter.
-    expect(Array.isArray(constituents)).toBe(true);
+  it('reads index weights from the weight column, not the price column', () => {
+    // Regression guard. The /indices/{code} table has 11 columns:
+    //   SYMBOL | NAME | LDCP | CURRENT | CHANGE | CHANGE (%) | IDX WTG (%) |
+    //   IDX POINT | VOLUME | FREEFLOAT (M) | MARKET CAP (M)
+    // An earlier parser assumed 3 columns and read LDCP as the weight, reporting
+    // Allied Bank at 169.66% instead of 0.41%.
+    const html = read('index-kse100.html');
+    const cons = parseConstituents(html, 'https://dps.psx.com.pk/indices/KSE100', 'KSE100');
+
+    expect(cons.length).toBeGreaterThan(50);
+
+    const abl = cons.find((c) => c.symbol === 'ABL');
+    expect(abl, 'ABL should be a KSE100 constituent').toBeDefined();
+    // Live values for ABL: LDCP 169.66, weight 0.41%, point 1.5395.
+    expect(abl?.weightPct).toBeCloseTo(0.41, 2);
+    expect(abl?.ldcp).toBeCloseTo(169.66, 2);
+    // A weight above 10% is implausible for a 100-member index and would mean
+    // we had read a price column again.
+    for (const c of cons) {
+      if (c.weightPct == null) continue;
+      expect(c.weightPct, `${c.symbol} weight looks like a price`).toBeLessThan(10);
+      expect(c.weightPct).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('does not report the company name as the sector', () => {
+    // NAME is column 1. An earlier version read it as `sector`.
+    const cons = parseConstituents(read('index-kse100.html'), 'https://dps.psx.com.pk/indices/KSE100', 'KSE100');
+    for (const c of cons) {
+      expect(c.sector, `${c.symbol} should have no sector from this endpoint`).toBeNull();
+      expect(c.name).not.toBe('');
+    }
   });
 
   it('parses only the sector table, not the 38 nested market-watch tables', () => {
@@ -524,16 +628,31 @@ describe('HTML entity parsers', () => {
 
   it('reads real values from the sector table', () => {
     const sectors = parseSectorSummaries(read('sector-summary.html'), `${SECTOR_URL}`);
+    // Derived from the fixture: sector aggregates move every session, so a
+    // literal here would fail on the next refresh without testing anything.
+    const html = read('sector-summary.html');
+    const row = /<td>0801<\/td>[\s\S]*?<\/tr>/.exec(html)?.[0] ?? '';
+    const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map((m) =>
+      (m[1] ?? '').replace(/<[^>]+>/g, '').trim(),
+    );
+    // cells: [code, name, advance, decline, unchange, turnover, marketCap]
+    const number = (s: string | undefined) => Number((s ?? '').replace(/,/g, ''));
+
     const automobile = sectors.find((s) => s.sector.code === '0801');
     expect(automobile).toBeDefined();
-    // Live values: Advance 9, Decline 1, Unchange 0, Turnover 1,183,350,
-    // Market Cap. 698.77 (billions PKR).
     expect(automobile?.sector.name).toBe('AUTOMOBILE ASSEMBLER');
-    expect(automobile?.advanced).toBe(9);
-    expect(automobile?.declined).toBe(1);
-    expect(automobile?.unchanged).toBe(0);
-    expect(automobile?.volume).toBe(1_183_350);
-    expect(automobile?.marketCapBn).toBeCloseTo(698.77, 2);
+    expect(automobile?.advanced).toBe(number(cells[2]));
+    expect(automobile?.declined).toBe(number(cells[3]));
+    expect(automobile?.unchanged).toBe(number(cells[4]));
+    expect(automobile?.volume).toBe(number(cells[5]));
+    expect(automobile?.marketCapBn).toBeCloseTo(number(cells[6]), 2);
+
+    // The regression this guards: sector volume once came from a market-watch
+    // column, so every sector reported a value that was not its own.
+    for (const s of sectors) {
+      if (s.volume == null) continue;
+      expect(s.volume, `${s.sector.code} volume`).toBeGreaterThan(0);
+    }
   });
 
   it('never reports a zero volume where the exchange published shares', () => {

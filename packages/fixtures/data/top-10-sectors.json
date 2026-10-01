@@ -2,51 +2,51 @@
  {
   "name": "TEXTILE SPINNING",
   "code": "0830",
-  "volume": 90882271
- },
- {
-  "name": "TRANSPORT",
-  "code": "0833",
-  "volume": 78736783
- },
- {
-  "name": "TECHNOLOGY & COMMUNICATION",
-  "code": "0828",
-  "volume": 56454567
- },
- {
-  "name": "MISCELLANEOUS",
-  "code": "0818",
-  "volume": 52138180
- },
- {
-  "name": "REFINERY",
-  "code": "0825",
-  "volume": 49873300
+  "volume": 120134627
  },
  {
   "name": "INV. BANKS / INV. COS. / SECURITIES COS.",
   "code": "0813",
-  "volume": 37345750
+  "volume": 58144022
+ },
+ {
+  "name": "TECHNOLOGY & COMMUNICATION",
+  "code": "0828",
+  "volume": 47109023
+ },
+ {
+  "name": "REFINERY",
+  "code": "0825",
+  "volume": 44471967
  },
  {
   "name": "POWER GENERATION & DISTRIBUTION",
   "code": "0824",
-  "volume": 32223814
+  "volume": 30643330
+ },
+ {
+  "name": "MODARABAS",
+  "code": "0819",
+  "volume": 28145971
+ },
+ {
+  "name": "TRANSPORT",
+  "code": "0833",
+  "volume": 27900641
+ },
+ {
+  "name": "OIL & GAS MARKETING COMPANIES",
+  "code": "0821",
+  "volume": 25681262
  },
  {
   "name": "FOOD & PERSONAL CARE PRODUCTS",
   "code": "0810",
-  "volume": 21606435
+  "volume": 24955769
  },
  {
-  "name": "CEMENT",
-  "code": "0804",
-  "volume": 20624326
- },
- {
-  "name": "FERTILIZER",
-  "code": "0809",
-  "volume": 20569763
+  "name": "MISCELLANEOUS",
+  "code": "0818",
+  "volume": 21766208
  }
 ]

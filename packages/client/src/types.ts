@@ -128,8 +128,24 @@ export interface IndexConstituent {
   symbol: string;
   name: string | null;
   sector: string | null;
-  /** Index weight as a percentage, e.g. `1.83` meaning 1.83%. */
+  /** Index weight as a percentage, e.g. `0.41` meaning 0.41%. */
   weightPct: number | null;
+  /** Index points contributed to the index level. */
+  indexPoints: number | null;
+  /** Free float in millions of shares. */
+  freeFloatMn: number | null;
+  /** Market capitalisation in millions of PKR. */
+  marketCapMn: number | null;
+  /** Previous session's close. */
+  ldcp: number | null;
+  /** Current traded price. */
+  current: number | null;
+  /** Absolute change vs ldcp. */
+  change: number | null;
+  /** Percentage change vs ldcp. */
+  changePct: number | null;
+  /** Traded volume in shares. */
+  volume: number | null;
   updatedAt: Timestamp | null;
 }
 

@@ -140,6 +140,57 @@ hbl.description;      // free-text profile
 hbl.warnings;         // [] when the page parsed cleanly
 ```
 
+## Caching and rate limiting
+
+The exchange documents a minimum 15-second polling interval per symbol and
+states it reserves the right to block an IP address. Both are enforced here.
+
+**Rate limiting** applies per symbol, so ten different symbols can be fetched
+concurrently while no single symbol exceeds one request per 15 seconds. Calls
+for the same symbol queue rather than firing together.
+
+```ts
+// Fetched in parallel; HBL still respects the floor.
+const [hbl, ogdc] = await Promise.all([psx.history('HBL'), psx.history('OGDC')]);
+```
+
+**Caching** lifetime follows the trading session: 15 seconds while the market is
+open (09:00-15:00 Asia/Karachi, Mon-Fri), 30 minutes when closed. The security
+directory and index constituents change rarely and are held for an hour.
+
+```ts
+await psx.marketWatch();                        // fetched
+await psx.marketWatch();                        // cached, ~0ms
+await psx.marketWatch({ bypassCache: true });   // fetched again
+
+psx.clearCache();                               // drop everything
+psx.stats();  // { cache: { hits, misses, coalesced, size }, limiter: { waits, totalWaitMs } }
+```
+
+Concurrent callers for the same uncached key share one request, so a React page
+mounting ten components sends one request, not ten.
+
+## Streaming
+
+An async iterable, so no event-emitter dependency. It bypasses the cache
+deliberately - a stream serving cached values is not a stream.
+
+```ts
+const controller = new AbortController();
+
+for await (const tick of psx.stream(['HBL', 'OGDC'], {
+  intervalMs: 15_000,
+  signal: controller.signal,
+})) {
+  console.log(tick.symbol, tick.price, tick.change);
+}
+
+controller.abort(); // stops the loop
+```
+
+The interval is measured from the start of each cycle, so a slow fetch pushes
+the next one out rather than stacking requests behind it.
+
 ## Two data sources
 
 PSX publishes data through two endpoints with very different properties.

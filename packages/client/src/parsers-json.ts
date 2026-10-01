@@ -481,35 +481,107 @@ function assertIndicesHeaders(headers: readonly string[], url: string): void {
 }
 
 /**
- * Parse index constituents from `/indices/{code}`.
+ * Parse the `/indices/{code}` constituent table.
  *
- * Wire shape is HTML. Each row carries the symbol, sector, index weight, and
- * point contribution, with `data-order` attributes holding machine values.
+ * The table has 11 columns, verified against live KSE100 on 2026-10-01:
+ *
+ *   SYMBOL | NAME | LDCP | CURRENT | CHANGE | CHANGE (%) |
+ *   IDX WTG (%) | IDX POINT | VOLUME | FREEFLOAT (M) | MARKET CAP (M)
+ *
+ * Columns are located by header name, never by position. An earlier version
+ * assumed a 3-column row and read LDCP as the index weight, reporting Allied
+ * Bank with a weight of 169.66% instead of 0.41%. Header names survive column
+ * reordering; assumed column counts do not.
  */
-export function parseConstituents(html: string, url: string, indexCode: string): IndexConstituent[] {
+export function parseConstituents(
+  html: string,
+  url: string,
+  indexCode: string,
+): IndexConstituent[] {
   const $ = cheerio.load(html);
 
-  const rows = $('tbody tr, table tr');
+  // Read headers from the table that owns these rows, so a second <thead>
+  // belonging to another table cannot shift the column map.
+  const rows = $('tbody tr');
+  assertMatched('index constituent rows', 'tbody tr', rows.length, url);
+
+  const headers = rows
+    .first()
+    .closest('table')
+    .find('thead th')
+    .map((_, el) => $(el).text().trim().toUpperCase())
+    .get();
+
+  const find = (candidates: readonly string[]): number =>
+    headers.findIndex((header) => candidates.some((c) => header.includes(c)));
+
+  const symbolAt = find(['SYMBOL']);
+  const nameAt = find(['NAME']);
+  const ldcpAt = find(['LDCP']);
+  const currentAt = find(['CURRENT']);
+  const changeAt = find(['CHANGE']);
+  // "CHANGE" also matches "CHANGE (%)", so require the exact header.
+  const changePctAt = headers.findIndex((h) => h === 'CHANGE (%)');
+  const weightAt = find(['WTG', 'WEIGHT']);
+  const pointAt = find(['POINT']);
+  const volumeAt = find(['VOLUME']);
+  const freeFloatAt = find(['FREEFLOAT', 'FREE FLOAT']);
+  const marketCapAt = find(['MARKET CAP', 'MARKETCAP']);
+
+  if (symbolAt < 0) {
+    throw new PsxSchemaError(
+      `index constituents: no SYMBOL column in [${headers.join(', ')}]`,
+      { url, selectorVersion: SELECTOR_VERSION, actual: headers.join(', ') },
+    );
+  }
+
   const constituents: IndexConstituent[] = [];
 
   rows.each((_, element) => {
-    // Use the parent traversal directly -- no need to re-serialise and re-parse.
     const row = $(element);
     const cells = row.find('td');
-    if (cells.length < 3) return;
+    if (cells.length === 0) return;
 
-    const symbol = (cells.eq(0).attr('data-search') ?? cells.eq(0).text()).trim();
+    // Prefer `data-order`; the weight column has none upstream, so text is the
+    // fallback rather than the exception.
+    const cellNum = (at: number): number | null => {
+      if (at < 0) return null;
+      const cell = cells.eq(at);
+      if (cell.length === 0) return null;
+      return parseNumber(cell.attr('data-order') ?? cell.text());
+    };
+
+    const symbol = (cells.eq(symbolAt).attr('data-search') ?? cells.eq(symbolAt).text()).trim();
     if (symbol === '') return;
 
     constituents.push({
       indexCode: indexCode.toUpperCase(),
       symbol: symbol.toUpperCase(),
-      name: cells.eq(0).find('a').attr('data-title') ?? null,
-      sector: cells.eq(1).text().trim() || null,
-      weightPct: parseNumber(cells.eq(2).attr('data-order') ?? cells.eq(2).text()),
+      name: nameAt < 0 ? null : cells.eq(nameAt).text().trim() || null,
+      // This endpoint publishes no sector column. Left null rather than
+      // borrowed from the name, which would be wrong. Use `symbols()` for
+      // sector codes.
+      sector: null,
+      weightPct: cellNum(weightAt),
+      indexPoints: cellNum(pointAt),
+      freeFloatMn: cellNum(freeFloatAt),
+      marketCapMn: cellNum(marketCapAt),
+      ldcp: cellNum(ldcpAt),
+      current: cellNum(currentAt),
+      change: cellNum(changeAt),
+      changePct: cellNum(changePctAt),
+      volume: cellNum(volumeAt),
       updatedAt: null,
     });
   });
+
+  if (constituents.length === 0) {
+    throw new PsxSchemaError('index constituents: rows found but none carried a symbol', {
+      url,
+      selectorVersion: SELECTOR_VERSION,
+      actual: `${rows.length} rows`,
+    });
+  }
 
   return constituents;
 }
