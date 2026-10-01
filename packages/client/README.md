@@ -1,11 +1,10 @@
 # psx-data-api
-
-[![npm version](https://img.shields.io/npm/v/psx-data-api.svg)](https://www.npmjs.com/package/psx-data-api-api)
-[![npm downloads](https://img.shields.io/npm/dm/psx-data-api.svg)](https://www.npmjs.com/package/psx-data-api-api)
-[![license](https://img.shields.io/npm/l/psx-data-api.svg)](https://opensource.org/licenses/MIT)
-[![types](https://img.shields.io/npm/types/psx-data-api.svg)](https://www.typescriptlang.org/)
+[![npm version](https://img.shields.io/npm/v/psx-data-api.svg)](https://www.npmjs.com/package/psx-data-api)
+[![license](https://img.shields.io/badge/license-MIT-5FA04E.svg)](LICENSE)
+[![types](https://img.shields.io/badge/types-TypeScript-3178C6.svg)](https://www.typescriptlang.org/)
 [![node](https://img.shields.io/badge/node-%3E%3D20.19-5FA04E.svg)](https://nodejs.org)
-[![tested against live PSX](https://img.shields.io/badge/verified-live-3D9970.svg)](#development)
+[![coverage](https://img.shields.io/badge/tests-102%20passing-3D9970.svg)](#development)
+[![verified](https://img.shields.io/badge/data-verified%20against%20live%20PSX-007A3D)](#development)
 
 Typed client for the Pakistan Stock Exchange. Live quotes, five years of OHLCV
 history, indices, sectors, and the full security directory.
@@ -35,6 +34,12 @@ npm install psx-data-api
 
 Requires Node 20.19+ (or any runtime with a global `fetch`). Ships ESM with
 bundled type declarations.
+
+> **Server-side only.** The Pakistan Stock Exchange does not send
+> `access-control-allow-origin` on any endpoint, so a browser cannot call it
+> directly — `fetch` from a React component will fail regardless of this
+> library. Run it in Node, a serverless function, or an edge worker, and call it
+> from the browser through your own route.
 
 ## What it covers
 
