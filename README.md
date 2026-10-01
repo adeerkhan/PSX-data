@@ -3,8 +3,10 @@
 [![license](https://img.shields.io/badge/license-MIT-5FA04E.svg)](LICENSE)
 [![types](https://img.shields.io/badge/types-TypeScript-3178C6.svg)](https://www.typescriptlang.org/)
 [![node](https://img.shields.io/badge/node-%3E%3D20.19-5FA04E.svg)](https://nodejs.org)
-[![coverage](https://img.shields.io/badge/tests-102%20passing-3D9970.svg)](#development)
+[![coverage](https://img.shields.io/badge/tests-123%20passing-3D9970.svg)](#development)
 [![verified](https://img.shields.io/badge/data-verified%20against%20live%20PSX-007A3D)](#development)
+
+<img src="docs/assets/hero.png" alt="psx-data-api - typed client for the Pakistan Stock Exchange" width="100%">
 
 Typed client for the Pakistan Stock Exchange. Live quotes, five years of OHLCV
 history, indices, sectors, and the full security directory.
