@@ -9,7 +9,7 @@
 Typed client for the Pakistan Stock Exchange. Live quotes, five years of OHLCV
 history, indices, sectors, and the full security directory.
 
-Plain typed arrays. Real numbers. `null` for absent values — never a formatted
+Plain typed arrays. Real numbers. `null` for absent values - never a formatted
 string, never a misleading `0`.
 
 ```ts
@@ -20,10 +20,10 @@ const psx = createPsxClient();
 const { data: quotes } = await psx.marketWatch();
 const hbl = quotes.find((q) => q.symbol === 'HBL');
 
-hbl.current;   // 302.80  — number
-hbl.change;    // 1.23    — negative when declining
-hbl.volume;    // 1153509 — integer, not "1,153,509"
-hbl.changePct; // 0.41    — number | null
+hbl.current;   // 302.80  - number
+hbl.change;    // 1.23    - negative when declining
+hbl.volume;    // 1153509 - integer, not "1,153,509"
+hbl.changePct; // 0.41    - number | null
 ```
 
 ## Install
@@ -37,7 +37,7 @@ bundled type declarations.
 
 > **Server-side only.** The Pakistan Stock Exchange does not send
 > `access-control-allow-origin` on any endpoint, so a browser cannot call it
-> directly — `fetch` from a React component will fail regardless of this
+> directly - `fetch` from a React component will fail regardless of this
 > library. Run it in Node, a serverless function, or an edge worker, and call it
 > from the browser through your own route.
 
@@ -80,7 +80,7 @@ console.log(summary.status);    // "OPEN" | "CLOSED" | "PRE_OPEN"
 console.log(summary.total);     // 569
 console.log(summary.trades);    // 295473
 
-// Internally consistent — the exchange's own arithmetic holds.
+// Internally consistent - the exchange's own arithmetic holds.
 summary.advanced + summary.declined + summary.unchanged === summary.total;
 ```
 
@@ -96,7 +96,7 @@ console.log(`${last?.time}  close ${last?.close}`);
 ```
 
 `history()` returns bars oldest-first, so charting libraries need no re-sorting.
-Note that PSX publishes **no high/low** on this endpoint — those fields are
+Note that PSX publishes **no high/low** on this endpoint - those fields are
 `null` rather than guessed.
 
 ```ts
@@ -147,7 +147,7 @@ PSX publishes data through two endpoints with very different properties.
 **`dps.psx.com.pk`** carries most of it, but requires three things on every
 request: an `X-Req-Id` header (a value inlined in page HTML), an
 `X-Requested-With: XMLHttpRequest` header, and a browser `User-Agent`. That key
-**rotates** — this client discovers it lazily and refreshes it automatically on
+**rotates** - this client discovers it lazily and refreshes it automatically on
 a 403.
 
 **`www.psx.com.pk/market-summary/`** requires none of that. A bare `fetch` works.
@@ -170,7 +170,7 @@ const { data, source, notice } = await psx.marketWatch();
 if (notice) console.warn(`using fallback: ${notice}`);
 ```
 
-A gated outage costs you `changePct` and index membership — not your data.
+A gated outage costs you `changePct` and index membership - not your data.
 
 ## Errors
 
@@ -207,13 +207,13 @@ PsxSchemaError: PSX response did not match expected structure
 ```
 
 This is deliberate. Most scrapers return an empty array when a site changes,
-which is indistinguishable from "market closed" — and that is exactly how several
+which is indistinguishable from "market closed" - and that is exactly how several
 existing PSX libraries became silently broken. A loud, specific failure is
 recoverable; a silent empty array is not.
 
 ## Design notes
 
-**`number | null`, always.** PSX genuinely publishes no value for some fields —
+**`number | null`, always.** PSX genuinely publishes no value for some fields -
 halted securities, thin coverage. Encoding that as `0` would render a stock at
 zero and corrupt any average computed over it. Absence is data, and it is typed
 as such.
@@ -227,7 +227,7 @@ it never parses `"73,446,994"` and never loses precision.
 
 **CORS blocks browsers.** No endpoint on `dps.psx.com.pk` sends
 `access-control-allow-origin`, so a browser cannot call PSX directly. Use this
-package server-side — Node, a serverless function, or an edge worker. Do not
+package server-side - Node, a serverless function, or an edge worker. Do not
 expect `fetch` from a React component to work.
 
 ## Troubleshooting
