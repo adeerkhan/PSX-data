@@ -1,4 +1,4 @@
-﻿# PSX Indicators & Performance Metrics — Implementation Specification
+# PSX Indicators & Performance Metrics — Implementation Specification
 
 **Status:** draft for implementation. Every numeric claim is tagged with its provenance:
 
@@ -69,12 +69,12 @@ export type HighLowClose = { high: readonly number[]; low: readonly number[]; cl
 
 This is the opposite of what most PSX/alpha-vantage-shaped APIs hand you.
 
-- `ref/psx-data-reader/src/psx/web.py:104` explicitly calls `data.sort_index()` (ascending).
+- The (now removed) ``psx-data-reader`` explicitly calls ``data.sort_index()`` (ascending).
 - The DPS historical API (`https://dps.psx.com.pk/historical`) returns each monthly table
   newest-row-first; the Python reader relies on the ascending sort to undo that.
 - The npm `technicalindicators` package calls `Indicator.reverseInputs(input)` on every input,
   because *its* public API takes newest-first arrays. Do **not** copy its convention.
-- `ref/pypsx_toolkit-3.1.2/.../ticker.pyi` documents `history()` returning a
+- The pypsx_toolkit public stub (since removed from this repo) documents`history()` returning a
   `Date`-indexed DataFrame but does not state the order.
 
 **Enforcement.** Every function that takes `Bar[]` MUST run this precondition and throw
@@ -3065,7 +3065,7 @@ Honest inventory. These are real gaps, not hedges.
 
 **Project-local references**
 
-- `ref/psx-data-reader/src/psx/web.py` — PSX OHLCV column names and the ascending-order sort.
+- The (now removed) psx-data-reader -- PSX OHLCV column names and its ascending-order sort.
 - `ref/pypsx_toolkit-3.1.2/pypsx_toolkit-3.1.2/pypsx_toolkit/analysis/__init__.pyi` — the
   intended public signatures, return-tuple orderings, and documented defaults this spec
   deliberately departs from where they are wrong or inconsistent.
@@ -3183,3 +3183,19 @@ export function interpretPortfolio(portfolio, opts?): PortfolioInterpretation
 - [ ] Tests use relative tolerance (`1e-9`), not exact float equality.
 - [ ] Fuzz pass on degenerate inputs: all-equal prices, single-spike series, zero volumes,
       subnormal values. See §9 item 11.
+---
+
+## Provenance note
+
+The reference Python libraries this spec was derived from were removed from
+the repository after their useful content was extracted. What was taken:
+
+- **pypsx_toolkit** -- the list of functions a polished PSX library exposes,
+  plus four conventions cited below. It shipped no implementations, so every
+  formula here was derived independently from TA-Lib's C source, Wilder's
+  original text, and published worked examples.
+- **PSX-Data-Api** -- the ungated market-summary scrape.
+- **psx-data-reader** -- nothing; it was already non-functional.
+
+Citations below reading "the pypsx_toolkit stub" refer to its type stubs and
+docstrings, not to code that existed here.

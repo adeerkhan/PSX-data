@@ -16,3 +16,12 @@ ref/
 #
 # They are protected from publication by `"private": true` on the fixtures
 # package, not by .gitignore. Do not add them here.
+
+# Reference Python libraries, removed after their useful content was extracted
+# into packages/client/src and docs/indicators-spec.md.
+#
+# Two of the three were unlicensed or proprietary, and one shipped a GitHub
+# Actions workflow that exfiltrated a PyPI token to a hardcoded IP on every
+# push. Keeping third-party source in-tree was a liability with no remaining
+# benefit. See docs/indicators-spec.md for what was taken.
+ref/
