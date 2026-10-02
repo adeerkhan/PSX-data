@@ -1,5 +1,6 @@
 # psx-data-api
 [![npm version](https://img.shields.io/npm/v/psx-data-api.svg)](https://www.npmjs.com/package/psx-data-api)
+[![CI](https://github.com/adeerkhan/PSX-data/actions/workflows/ci.yml/badge.svg)](https://github.com/adeerkhan/PSX-data/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT-5FA04E.svg)](LICENSE)
 [![types](https://img.shields.io/badge/types-TypeScript-3178C6.svg)](https://www.typescriptlang.org/)
 [![node](https://img.shields.io/badge/node-%3E%3D20.19-5FA04E.svg)](https://nodejs.org)
@@ -309,6 +310,37 @@ npm run record
 Tests run entirely against recorded fixtures and never touch the network. `npm
 run verify` is the live check: it parses each source twice with independent
 readers and compares every field.
+
+## Releases
+
+Publishing and tagging are automated. The only manual steps are the version
+bump and the tag; the tag is what starts the pipeline.
+
+```sh
+npm version 0.3.0 --workspace psx-data-api --no-git-tag-version
+git commit -am "chore: release 0.3.0"
+git tag -a v0.3.0 -m "psx-data-api 0.3.0"
+git push origin main --follow-tags
+```
+
+`--no-git-tag-version` is required. Without it npm attempts its own commit and
+tag, which races with the lockfile update and leaves you untagged.
+
+Pushing the tag runs `.github/workflows/release.yml`, which refuses to go
+further if the tag does not match the version in
+`packages/client/package.json`, runs the full check and a clean build,
+publishes to npm with provenance, then creates the GitHub release with notes
+generated from the commits since the previous tag and the packed tarball
+attached. If npm already has that version, the publish is skipped and only the
+release is created, so a re-run is safe.
+
+There is no `NPM_TOKEN` in this repository. CI authenticates to npm through
+Trusted Publishing, configured once at
+npmjs.com: package `psx-data-api`, publisher GitHub Actions, repository
+`adeerkhan/PSX-data`, workflow `release.yml`.
+
+To rehearse the whole pipeline without publishing, run the Release workflow by
+hand from the Actions tab and leave `dry_run` on.
 
 ## Data source
 

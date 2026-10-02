@@ -1,0 +1,165 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: >-
+          Run every step except the npm publish and the GitHub release.
+        type: boolean
+        default: true
+      npm_tag:
+        description: >-
+          npm dist-tag to publish under. Leave empty for "latest".
+          Use a prerelease tag such as "next" for -rc / -beta builds.
+        type: string
+        default: ''
+
+# contents: write -> create the GitHub release and any missing tag.
+# id-token: write -> npm Trusted Publishing (OIDC) and provenance attestations.
+# There is deliberately no NPM_TOKEN secret in this repository.
+permissions:
+  contents: write
+  id-token: write
+
+# Never cancel a release partway through a publish.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history so `gh release create --generate-notes` can diff
+          # against the previous release tag.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          # registry-url is intentionally omitted: writing a .npmrc that
+          # references ${NODE_AUTH_TOKEN} breaks the OIDC token exchange.
+
+      - name: Require npm with Trusted Publishing support
+        run: |
+          npm_version="$(npm --version)"
+          echo "npm $npm_version"
+          node -e '
+            const [maj, min] = process.argv[1].split(".").map(Number);
+            if (maj < 11 || (maj === 11 && min < 5)) {
+              console.error(`npm ${process.argv[1]} cannot use Trusted Publishing; need >= 11.5.1`);
+              process.exit(1);
+            }
+          ' "$npm_version"
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck and test
+        run: npm run check
+
+      - name: Build
+        run: npm run build
+
+      # The tag is the source of truth: it must name the exact version that
+      # is about to be published. A mismatch means a half-finished version
+      # bump, and publishing it would put the wrong code on npm.
+      - name: Resolve version and verify it matches the tag
+        id: version
+        run: |
+          manifest=packages/client/package.json
+          name="$(node -p "require('./$manifest').name")"
+          version="$(node -p "require('./$manifest').version")"
+          echo "Publishing $name@$version"
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            tagged="${GITHUB_REF_NAME#v}"
+            if [ "$tagged" != "$version" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match $manifest version $version"
+              exit 1
+            fi
+          else
+            echo "::notice::Not a tag push; releasing the version already in $manifest."
+          fi
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Pack tarball for the GitHub release
+        id: pack
+        working-directory: packages/client
+        run: |
+          tarball="$(npm pack --pack-destination "$RUNNER_TEMP" --silent)"
+          echo "Packed $tarball"
+          echo "path=$RUNNER_TEMP/$tarball" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to npm
+        env:
+          PKG_NAME: ${{ steps.version.outputs.name }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          DRY_RUN: ${{ inputs.dry_run || false }}
+          NPM_TAG: ${{ inputs.npm_tag }}
+        working-directory: packages/client
+        run: |
+          set -euo pipefail
+
+          args=(--access public)
+          [ -n "$NPM_TAG" ] && args+=(--tag "$NPM_TAG")
+
+          # Decided once, then used by both paths. npm refuses to publish over
+          # an existing version even under --dry-run, so this check has to come
+          # first or the dry run would fail on any version already released.
+          if npm view "$PKG_NAME@$RELEASE_VERSION" version >/dev/null 2>&1; then
+            already_published=true
+          else
+            already_published=false
+          fi
+
+          if [ "$DRY_RUN" = "true" ]; then
+            if [ "$already_published" = "true" ]; then
+              echo "Dry run: $PKG_NAME@$RELEASE_VERSION is already on npm, so a real run would skip the publish."
+            else
+              echo "Dry run: validating the publish, nothing is sent to npm."
+              npm publish "${args[@]}" --dry-run
+            fi
+            exit 0
+          fi
+
+          # Idempotent. Re-running after a partial failure must not fail on a
+          # version npm already has.
+          if [ "$already_published" = "true" ]; then
+            echo "::notice::$PKG_NAME@$RELEASE_VERSION is already on npm; skipping publish"
+          else
+            npm publish "${args[@]}" --provenance
+          fi
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+          TARBALL: ${{ steps.pack.outputs.path }}
+          DRY_RUN: ${{ inputs.dry_run || false }}
+        run: |
+          set -euo pipefail
+          tag="v$RELEASE_VERSION"
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run: would create GitHub release $tag from $(basename "$TARBALL")"
+            exit 0
+          fi
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "::notice::GitHub release $tag already exists; leaving it untouched"
+          else
+            # Creates the tag too if this run came from workflow_dispatch
+            # rather than a tag push. Notes are generated from the commits
+            # since the previous release, so there is no changelog to maintain.
+            gh release create "$tag" "$TARBALL" --title "$tag" --generate-notes
+          fi
