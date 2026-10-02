@@ -9,6 +9,10 @@
 
 <img src="docs/assets/hero.png" alt="psx-data-api - typed client for the Pakistan Stock Exchange" width="100%">
 
+> **Install from npm:** `npm install psx-data-api`
+> [package](https://www.npmjs.com/package/psx-data-api) |
+> [releases](https://github.com/adeerkhan/PSX-data/releases)
+
 Typed client for the Pakistan Stock Exchange. Live quotes, five years of OHLCV
 history, indices, sectors, and the full security directory.
 
