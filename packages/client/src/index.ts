@@ -56,6 +56,7 @@ export {
   PsxAbortError,
   PsxAuthError,
   PsxConfigError,
+  PsxEdgeError,
   PsxError,
   PsxNetworkError,
   PsxNotFoundError,

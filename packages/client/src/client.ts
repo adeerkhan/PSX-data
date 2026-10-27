@@ -174,7 +174,16 @@ export class PsxClient {
    * End-of-day OHLCV history, oldest bar first.
    *
    * ~1,239 daily bars over about five years. PSX publishes open, close, and
-   * volume only -- high and low are `null`, never guessed.
+   * volume only -- high and low are `null`, never guessed. Each bar's `time`
+   * is the session's last trade moment, not midnight; take the date part.
+   *
+   * **Coverage, measured 2026-10-27:** equities, debt instruments, ETFs, and
+   * the indices themselves -- `history('KSE100')` returns the index's real
+   * daily series (latest close 164,467.2, the published level, not a rebased
+   * proxy). One caveat dominates this method's usefulness: PSX's data
+   * endpoints refuse **datacenter egress** -- Cloudflare Workers included --
+   * while the content pages answer the same network. From a Worker this throws
+   * {@link PsxEdgeError}; from residential Node it works.
    *
    * @example
    * ```ts

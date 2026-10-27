@@ -26,6 +26,7 @@
 import { HOSTS, BROWSER_UA } from './selectors.js';
 import {
   PsxAuthError,
+  PsxEdgeError,
   PsxNetworkError,
   PsxNotFoundError,
   PsxRateLimitError,
@@ -167,7 +168,26 @@ export class Transport {
     if (response == null) {
       this.#state.refreshes += 1;
       this.invalidateKey();
-      response = await this.#send(HOSTS.dps + path, await this.#headers(true));
+      // The retry carries a **freshly discovered** key, so a second 403 is not
+      // staleness -- measured 2026-10-27, PSX's data endpoints refuse some
+      // egress entirely (Cloudflare Workers among them) while the content
+      // pages answer the same network. The rethrow names that, because a
+      // caller told to "refresh the key" would refresh forever.
+      try {
+        response = await this.#send(HOSTS.dps + path, await this.#headers(true));
+      } catch (error) {
+        if (error instanceof PsxAuthError) {
+          throw new PsxAuthError(
+            'PSX refused this request with a freshly discovered gate key, so the key is ' +
+              'not the cause: the request itself or this egress is being rejected. PSX ' +
+              'data endpoints have been measured to refuse datacenter egress (Cloudflare ' +
+              'Workers included) while content pages answer -- try a different egress, or ' +
+              'read the ungated source.',
+            { url: error.url, cause: error },
+          );
+        }
+        throw error;
+      }
     }
 
     return response.text;
@@ -268,6 +288,21 @@ export class Transport {
       }
       default:
         break;
+    }
+
+    // The 52x family is Cloudflare's own "the origin or its edge refused this"
+    // -- not an HTTP error PSX produced. Measured 2026-10-27: PSX's data
+    // endpoints answer 520 to datacenter egress (Cloudflare Workers included)
+    // while the content pages answer, so this error means "the egress is the
+    // problem", which no amount of header fixing cures.
+    if (response.status >= 520 && response.status <= 527) {
+      throw new PsxEdgeError(
+        response.status,
+        `the exchange's edge refused the request (Cloudflare ${response.status}): PSX's ` +
+          'data endpoints have been measured to refuse datacenter egress while content ' +
+          'pages answer the same network. Retry from a different egress or read a capture.',
+        { url },
+      );
     }
 
     if (!response.ok) {

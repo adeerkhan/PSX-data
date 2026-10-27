@@ -220,3 +220,39 @@ describe('diagnostics accessors', () => {
     expect(transport.hasKey).toBe(false);
   });
 });
+
+describe('the edge and the refused egress', () => {
+  it('maps the Cloudflare 52x family to PsxEdgeError, without retrying', async () => {
+    // An edge refusal is not a key problem: retrying with a fresh gate key
+    // cannot cure it, and hammering the exchange between attempts helps
+    // nobody. One attempt, one typed error.
+    const { fn, calls } = stubFetch([
+      { body: `<script>window.__ps = {"_k":"${KEY_A}"};</script>` },
+      { status: 520, body: '' },
+    ]);
+    const transport = createTransport({ fetch: fn });
+    await expect(transport.fetchGated('/market-watch')).rejects.toMatchObject({
+      code: 'EDGE',
+      status: 520,
+    });
+    // Two requests total: key discovery, then the gated call. No retry.
+    expect(calls).toHaveLength(2);
+  });
+
+  it('names the refused egress when a fresh key is also refused', async () => {
+    // A 403 after a **freshly discovered** key is not staleness -- the measured
+    // cause is egress blocking on the data endpoints. The error says so,
+    // because a caller told to "refresh the key" would refresh forever.
+    const { fn } = stubFetch([
+      { body: `<script>window.__ps = {"_k":"${KEY_A}"};</script>` },
+      { status: 403, body: '' },
+      { body: `<script>window.__ps = {"_k":"${KEY_B}"};</script>` },
+      { status: 403, body: '' },
+    ]);
+    const transport = createTransport({ fetch: fn });
+    const error = await transport.fetchGated('/market-watch').catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(PsxAuthError);
+    expect((error as Error).message).toContain('freshly discovered gate key');
+    expect((error as Error).message).toContain('datacenter egress');
+  });
+});

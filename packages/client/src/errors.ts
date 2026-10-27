@@ -31,6 +31,7 @@ export type PsxErrorCode =
   | 'RATE_LIMITED'
   | 'TIMEOUT'
   | 'NETWORK'
+  | 'EDGE'
   | 'SCHEMA'
   | 'CONFIG'
   | 'ABORTED'
@@ -173,6 +174,29 @@ export class PsxNetworkError extends PsxError {
 
   constructor(message: string, options: { url?: string | null; cause?: unknown } = {}) {
     super('NETWORK', message, options);
+  }
+}
+
+/**
+ * The exchange's **edge** refused the request -- a Cloudflare 52x, not an HTTP
+ * error PSX's origin produced.
+ *
+ * Measured 2026-10-27: PSX's data endpoints (`/market-watch`, `/timeseries/*`)
+ * answer 52x to **datacenter egress** -- Cloudflare Workers included -- while
+ * the content pages (`/company`, `/indices`, `/screener`, `/sector-summary`,
+ * `/listings-table`) answer the same network normally. The gate is not the
+ * cause: the same request with a freshly discovered key fails identically from
+ * a Worker and succeeds from residential Node. Retrying cannot help; the fix
+ * is a different egress or a capture written from one.
+ */
+export class PsxEdgeError extends PsxError {
+  override readonly code = 'EDGE' as const;
+  /** The Cloudflare status the edge answered (520-527 family). */
+  readonly status: number;
+
+  constructor(status: number, message: string, options: { url?: string | null; cause?: unknown } = {}) {
+    super('EDGE', message, options);
+    this.status = status;
   }
 }
 
