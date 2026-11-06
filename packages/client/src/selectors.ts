@@ -178,6 +178,17 @@ export const SELECTORS = {
      * load-bearing and must be matched exactly.
      */
     description: 'div.profile__item--decription',
+    /**
+     * The profile block's label headings (`ADDRESS`, `WEBSITE`, `REGISTRAR`,
+     * `AUDITOR`, `Fiscal Year End`).
+     *
+     * Each heading is followed by its own `<p>`; the `KEY PEOPLE` heading is
+     * followed by a table instead and is read separately. Read by heading text
+     * rather than by position because the block's order is not a contract.
+     */
+    detailHead: 'div.profile__item .item__head',
+    /** The `KEY PEOPLE` rows: `<strong>name</strong>` in the first cell, role in the second. */
+    keyPeopleRow: 'div.profile__item--people table tbody tr',
   },
 } as const;
 

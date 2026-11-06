@@ -664,7 +664,70 @@ export function parseCompanyProfile(html: string, url: string, symbol: string): 
     .text()
     .trim();
 
-  const title = $('h1, h2').first().text().trim();
+  /*
+   * The profile block: `ADDRESS`, `WEBSITE`, `REGISTRAR`, `AUDITOR` and
+   * `Fiscal Year End`, each heading followed by its own `<p>`.
+   *
+   * Read by heading text, not by position: the block's order is not a
+   * contract, and the same page concatenates several `item__head` blocks with
+   * different shapes (`KEY PEOPLE` holds a table). A heading whose next sibling
+   * is not a paragraph is skipped, which is exactly what keeps the table out of
+   * this map.
+   */
+  const details = new Map<string, string>();
+  $(SELECTORS.company.detailHead).each((_, element) => {
+    const label = $(element).text().trim().toLowerCase();
+    if (label === '' || details.has(label)) return;
+    const value = $(element).next('p').first().text().trim();
+    if (value !== '') details.set(label, value);
+  });
+  const detail = (label: string): string | null => details.get(label) ?? null;
+
+  /*
+   * The website is the only field with a machine value behind the text: the
+   * paragraph holds `<a href="http://www.hbl.com">www.hbl.com</a>`, so the
+   * anchor's href is the address and the text is what a reader sees. Prefer the
+   * href, and give a bare domain a scheme so a caller can fetch it without
+   * guessing.
+   */
+  let website: string | null = null;
+  $(SELECTORS.company.detailHead).each((_, element) => {
+    if (website !== null) return;
+    if ($(element).text().trim().toLowerCase() !== 'website') return;
+    const paragraph = $(element).next('p').first();
+    const href = paragraph.find('a').first().attr('href')?.trim() ?? '';
+    const candidate = href !== '' ? href : paragraph.text().trim();
+    if (candidate === '') return;
+    website = /^https?:\/\//i.test(candidate) ? candidate : `https://${candidate}`;
+  });
+
+  /** The `KEY PEOPLE` table: name in the first cell, role in the second. */
+  const keyPeople: { name: string; role: string }[] = [];
+  $(SELECTORS.company.keyPeopleRow).each((_, row) => {
+    const cells = $(row).find('td');
+    const name = cells.eq(0).text().trim();
+    const role = cells.eq(1).text().trim();
+    if (name !== '') keyPeople.push({ name, role });
+  });
+
+  /*
+   * The name comes from the document title, not from the first heading.
+   *
+   * The page has no company-name heading: the first `h1`/`h2` in DOM order is
+   * an `ODL` tab panel's `<h2>No record found</h2>`, so `$('h1, h2').first()`
+   * reported that empty-tab placeholder as the company's name — for every
+   * scrip on the exchange. The title is the one complete source:
+   *
+   *     HBL - Stock quote for Habib Bank Limited - Pakistan Stock Exchange (PSX)
+   */
+  const documentTitle = $('title').first().text().trim();
+  const name = (() => {
+    const named = /\s-\s+Stock quote for\s+(.+?)\s+-\s+Pakistan Stock Exchange/i.exec(documentTitle);
+    if (named !== null) return named[1]!.trim();
+    const heading = $('h1, h2').first().text().trim();
+    // The placeholder is not a name: an unreported company reports `null`.
+    return heading === '' || /^no record found$/i.test(heading) ? null : heading;
+  })();
 
   if (allValues.size === 0) {
     warnings.push('no stats_label pairs found -- PSX may have changed the profile layout');
@@ -675,9 +738,15 @@ export function parseCompanyProfile(html: string, url: string, symbol: string): 
 
   return {
     symbol: symbol.toUpperCase(),
-    name: title === '' ? null : title,
+    name,
     sector: null,
     description: description === '' ? null : description,
+    address: detail('address'),
+    website,
+    registrar: detail('registrar'),
+    auditor: detail('auditor'),
+    fiscalYearEnd: detail('fiscal year end'),
+    keyPeople,
     ldcp: stat('ldcp'),
     open: stat('open'),
     high: stat('high'),

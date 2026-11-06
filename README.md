@@ -144,8 +144,31 @@ hbl.totalShares;      // 1466852508
 hbl.freeFloatShares;  // 586741003
 hbl.description;      // free-text profile
 
+// The profile block (0.4.0).
+hbl.address;          // "9th Floor, Habib Bank tower, …"
+hbl.website;          // "http://www.hbl.com"
+hbl.registrar;        // "CDC Share Registrar Services Limited …"
+hbl.auditor;          // "A.F. Ferguson & Co. Chartered Accountants"
+hbl.fiscalYearEnd;    // "December"
+hbl.keyPeople;        // [{ name: "Muhammad Nassir Salim", role: "CEO" }, …]
+
 hbl.warnings;         // [] when the page parsed cleanly
 ```
+
+**There is no company logo field, because PSX publishes no company logo image.**
+The data portal's company page carries site chrome only — measured 2026-11-06:
+its images are the portal logo, the broker badge and the social icons, and the
+directory (`/symbols`) has no logo column. The profile block's `website` is the
+one per-company asset the exchange does publish, so a logo is resolved from
+*the company's own site* — its `og:image`, `apple-touch-icon` or favicon — and
+that resolution is left to the caller: it is a fetch to a third party, and its
+caching, failure handling and licensing belong where those are decided.
+
+Measured on ten PSX companies (2026-11-06): the website is published for 10/10;
+fetching the site resolves a brand image for about half (HBL `og:image`, MCB
+`og:logo`, LUCK and PTCL icons), because several corporate sites refuse
+non-browser clients or publish their mark only in a header image. Treat a
+resolved logo as a best effort with a fallback, not as a field.
 
 ## Caching and rate limiting
 

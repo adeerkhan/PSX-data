@@ -268,11 +268,19 @@ export class PsxClient {
   }
 
   /**
-   * Fundamentals for one security.
+   * Fundamentals for one security, including the profile block.
    *
    * PSX concatenates several stat blocks that reuse labels (`Free Float`
    * appears as both a share count and a percentage); the parser reads the live
    * quote block and reports ambiguity in `warnings`.
+   *
+   * The page also carries a profile block — address, website, registrar,
+   * auditor, fiscal year end and key people — read into their own fields from
+   * 0.4.0. **There is no logo field**: PSX publishes no company logo image.
+   * `website` is the only per-company asset the exchange publishes that a brand
+   * mark can be resolved from, and resolving it is the caller's decision (the
+   * company site's `og:image`, `apple-touch-icon` or favicon), not this
+   * client's: that fetch belongs where its caching and licensing are decided.
    */
   async company(symbol: string): Promise<CompanyProfile> {
     const upper = symbol.toUpperCase();

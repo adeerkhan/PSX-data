@@ -532,6 +532,65 @@ describe('HTML entity parsers', () => {
     expect(profile.warnings).not.toContain('no stats_label pairs found -- PSX may have changed the profile layout');
   });
 
+  it('reads the profile block: address, website, registrar, auditor, fiscal year end', () => {
+    // The profile block is a second, differently shaped section on the same
+    // page: `item__head` headings each followed by their own paragraph. It was
+    // unread until now — and the website is the only per-company asset PSX
+    // publishes that a brand mark can be resolved from.
+    const profile = parseCompanyProfile(read('company-hbl.html'), 'https://dps.psx.com.pk/company/HBL', 'HBL');
+    expect(profile.address).toContain('Habib Bank tower');
+    expect(profile.website).toBe('http://www.hbl.com');
+    // The recorded fixture is a body fragment with no <title>, and its first
+    // heading in DOM order is an empty ODL tab's "No record found" — the
+    // placeholder that used to be reported as the company's name for every
+    // scrip. With no title and no real heading, the honest answer is null.
+    expect(profile.name).toBeNull();
+    expect(profile.registrar).toContain('CDC Share Registrar');
+    expect(profile.auditor).toContain('A.F. Ferguson');
+    expect(profile.fiscalYearEnd).toBe('December');
+  });
+
+  it('reads the company name from the document title, not the first heading', () => {
+    // The live page has no company-name heading; its first h1/h2 is an empty
+    // ODL tab. The title is the one complete source.
+    const html =
+      '<html><head><title>HBL - Stock quote for Habib Bank Limited - ' +
+      'Pakistan Stock Exchange (PSX)</title></head><body>' +
+      '<h2>No record found</h2></body></html>';
+    const profile = parseCompanyProfile(html, 'https://dps.psx.com.pk/company/HBL', 'HBL');
+    expect(profile.name).toBe('Habib Bank Limited');
+  });
+
+  it('reads the KEY PEOPLE table as name/role pairs', () => {
+    const profile = parseCompanyProfile(read('company-hbl.html'), 'https://dps.psx.com.pk/company/HBL', 'HBL');
+    expect(profile.keyPeople[0]).toEqual({ name: 'Muhammad Nassir Salim', role: 'CEO' });
+    expect(profile.keyPeople.map((p) => p.role)).toContain('Chairperson');
+  });
+
+  it('gives a bare-domain website a scheme, and never invents one', () => {
+    const html =
+      '<html><body><div class="profile__items"><div class="profile__item">' +
+      '<div class="item__head">WEBSITE</div>' +
+      '<p> <a href="www.example.com" target="_blank">www.example.com</a></p>' +
+      '</div></div></body></html>';
+    const bare = parseCompanyProfile(html, 'https://dps.psx.com.pk/company/X', 'X');
+    expect(bare.website).toBe('https://www.example.com');
+
+    // A page with no profile block answers null/[] rather than empty strings.
+    const empty = parseCompanyProfile('<html><body></body></html>', 'https://dps.psx.com.pk/company/X', 'X');
+    expect(empty.website).toBeNull();
+    expect(empty.address).toBeNull();
+    expect(empty.fiscalYearEnd).toBeNull();
+    expect(empty.keyPeople).toEqual([]);
+    // A page whose only heading is the placeholder does not name the company.
+    const placeholder = parseCompanyProfile(
+      '<html><head><title></title></head><body><h2>No record found</h2></body></html>',
+      'https://dps.psx.com.pk/company/X',
+      'X',
+    );
+    expect(placeholder.name).toBeNull();
+  });
+
   it('reads the first occurrence of a duplicated stat label', () => {
     // The company page concatenates several stat blocks that REUSE labels.
     // Verified on the live HBL page: 15 labels are duplicated --

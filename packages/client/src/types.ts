@@ -195,6 +195,40 @@ export interface CompanyProfile {
   sector: Sector | null;
   /** Free-text company description as published by PSX. */
   description: string | null;
+  /**
+   * The registered office, as the company profile block publishes it.
+   *
+   * Part of the page's detail block (`ADDRESS`, `WEBSITE`, `REGISTRAR`,
+   * `AUDITOR`, `Fiscal Year End`), read with the same tolerance as the stat
+   * pairs: a value the page does not carry is `null`, never an empty string.
+   */
+  address: string | null;
+  /**
+   * The company's own website, as PSX links it -- normalised to include a
+   * scheme.
+   *
+   * **PSX publishes no company logo image.** The profile block's only
+   * per-company asset is this link, so it is the field a caller resolves a
+   * brand mark from (the company site's `og:image`, `apple-touch-icon` or
+   * favicon), and the library deliberately does not scrape third-party sites
+   * to do it: that fetch belongs where its caching and its licensing are
+   * decided, not in a data client. `null` when the profile block carries no
+   * website.
+   */
+  website: string | null;
+  /** The share registrar, as published. */
+  registrar: string | null;
+  /** The auditor, as published. */
+  auditor: string | null;
+  /** The fiscal year end, as the page states it (`"December"`). */
+  fiscalYearEnd: string | null;
+  /**
+   * The `KEY PEOPLE` table: name and role, in document order.
+   *
+   * Empty when the page carries no table -- which is normal for debt
+   * instruments and for scrips whose profile block was never filled in.
+   */
+  keyPeople: { name: string; role: string }[];
   ldcp: number | null;
   open: number | null;
   high: number | null;

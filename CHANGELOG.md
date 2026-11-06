@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.4.0 — 2026-11-06
+
+**The profile block, read — and the logo question answered.**
+
+`company()` now reads the second section of the company page, which had never
+been parsed: the registered office, the company's own website, the registrar,
+the auditor, the fiscal year end and the `KEY PEOPLE` table. Each field is read
+by heading text rather than by position, and each is `null` (or `[]`) when the
+page does not carry it — a debt instrument has no key people, and a scrip whose
+profile was never filled in has no address. The website is normalised to include
+a scheme: the page links an absolute URL, and the rendered text is sometimes the
+bare domain.
+
+The reason this matters beyond the fields: **PSX publishes no company logo
+image.** Measured 2026-11-06 — the company page's eighteen images are portal
+chrome and the data vendor's badge, `/symbols` has no logo column, and the
+stylesheet has no per-company asset. The profile block's `website` is the only
+per-company asset the exchange publishes, so it is what a brand mark is resolved
+from, on the company's own site. This release deliberately does not fetch
+third-party sites: that is the caller's fetch, with the caller's caching and
+licensing. On ten sampled companies the website was published 10/10 and a brand
+image resolved from the company site for about half — a best effort with a
+fallback, not a field.
+
+No endpoint or wire changes: the profile block was always in the response body,
+and `npm test` covers the new reads against the recorded HBL page.
+
 ## 0.3.0 — 2026-10-27
 
 **The refused-egress diagnosis.** Measured 2026-10-27: PSX's data endpoints
